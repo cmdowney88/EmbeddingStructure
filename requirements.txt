@@ -1,5 +1,4 @@
 datasets==2.7.*
 torch==1.13.*
 transformers[torch]==4.20.*
-evaluate==0.3.0
 yapf
