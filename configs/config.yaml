@@ -5,6 +5,10 @@ dataset_block_size: 128
 mlm_masking_prob: 0.15
 max_len: 512
 
+# tokenizer
+tokenizer_save_dir: "src/tokenizer"
+tokenizer_vocab_size: 50000
+
 # training
 seed: 42
 hf_model: "xlm-roberta-large"
