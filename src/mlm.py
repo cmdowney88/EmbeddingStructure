@@ -2,9 +2,12 @@ import argparse
 import yaml
 
 import torch
-from transformers import AutoTokenizer, AutoModelForMaskedLM, LineByLineTextDataset, \
+from transformers import (
+    AutoTokenizer, AutoModelForMaskedLM, LineByLineTextDataset,
     DataCollatorForLanguageModeling, Trainer, TrainingArguments
+)
 
+from data import ShardedTextDataset
 
 # read training configurations from YAML file
 parser = argparse.ArgumentParser(
@@ -16,7 +19,6 @@ config_dict = vars(args)
 with open(args.config, 'r') as config_file:
     config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
 
-
 # load pretrained model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained(args.hf_model, max_len=args.max_len)
 model = AutoModelForMaskedLM.from_pretrained(args.hf_model)
@@ -26,10 +28,8 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 model.to(device)
 
 # prepare training data
-train_dataset = LineByLineTextDataset(
-    tokenizer=tokenizer,
-    file_path=args.train_dataset_path,
-    block_size=args.dataset_block_size,
+train_dataset = ShardedTextDataset(
+    args.train_dataset_path, tokenizer, max_seq_length=args.max_len
 )
 
 # prepare validation data
