@@ -1,7 +1,9 @@
 # Custom
+checkpoints/
 data/
 jhubc-2021-07-08/
 *~
+.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
