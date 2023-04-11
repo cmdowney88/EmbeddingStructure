@@ -1,6 +1,7 @@
 # Custom
 checkpoints/
 data/
+tokenizers/
 jhubc-2021-07-08/
 *~
 .DS_Store
