@@ -1,4 +1,5 @@
 import argparse
+import random
 import yaml
 
 import sentencepiece as spm
@@ -13,6 +14,8 @@ config_dict = vars(args)
 with open(args.config, 'r') as config_file:
     config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
 
+random.seed(1)
+
 spm.SentencePieceTrainer.Train(
     input=args.train_dataset_path,
     model_prefix=args.output_path,
@@ -26,5 +29,6 @@ spm.SentencePieceTrainer.Train(
     eos_piece='[SEP]',
     unk_piece='[UNK]',
     user_defined_symbols='[MASK]',
-    model_type=args.tokenizer_model
+    model_type=args.tokenizer_model,
+    character_coverage=1.0
 )
