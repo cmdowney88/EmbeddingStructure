@@ -1,0 +1,64 @@
+# Sentencepiece vocabulary parameters
+tokenizer_model: unigram
+vocab_size: 4096
+train_dataset_path: data/combined_vocab_train.txt
+output_path: tokenizers/caucasus_spm
+
+# Paths and alpha for sampling vocab training set
+alpha: 0.5
+combined_data_output: data/combined_vocab_train.txt
+data_files:
+    armenian:
+        directory: data/indo-european/armenian
+        files: [hye_jhubc.txt]
+    georgian:
+        directory: data/kartvelian/georgian
+        files: [kat_jhubc.txt]
+    aghul:
+        directory: data/ne_caucasian/aghul
+        files: [agx_jhubc.txt]
+    avar:
+        directory: data/ne_caucasian/avar
+        files: [ava_jhubc.txt, avar_wiki.txt]
+    chechen:
+        directory: data/ne_caucasian/chechen
+        files: [che_jhubc.txt]
+    ingush:
+        directory: data/ne_caucasian/ingush
+        files: [ingush_wiki.txt]
+    lak:
+        directory: data/ne_caucasian/lak
+        files: [lak_wiki.txt]
+    lezgin:
+        directory: data/ne_caucasian/lezgin
+        files: [lezgin_wiki.txt]
+    tabasaran:
+        directory: data/ne_caucasian/tabasaran
+        files: [tab_jhubc.txt]
+    abkhaz:
+        directory: data/nw_caucasian/abkhaz
+        files: [abkhaz_wiki.txt]
+    adyghe:
+        directory: data/nw_caucasian/adyghe
+        files: [adyghe_wiki.txt]
+    kabardian:
+        directory: data/nw_caucasian/kabardian
+        files: [kabardian_wiki.txt]
+    azerbaijani:
+        directory: data/turkic/azerbaijani
+        files: [azb_1161.biblecom.txt, azb_AZBEMV.api.txt, azj-AZEBSA.txt.detok]
+    karachay-balkar:
+        directory: data/turkic/karachay-balkar
+        files: [karachay-balkar_wiki.txt, krc_jhubc.txt]
+    kumyk:
+        directory: data/turkic/kumyk
+        files: [kum_jhubc.txt]
+    nogai:
+        directory: data/turkic/nogai
+        files: [nog_jhubc.txt]
+    turkmen:
+        directory: data/turkic/turkmen
+        files: [tuk_jhubc.txt]
+    
+    
+    
