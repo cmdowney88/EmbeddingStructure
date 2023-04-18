@@ -20,8 +20,13 @@ with open(args.config, 'r') as config_file:
     config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
 
 # load pretrained model and tokenizer
-tokenizer = AutoTokenizer.from_pretrained(args.hf_model, max_len=args.max_len)
+tokenizer = AutoTokenizer.from_pretrained(args.hf_model, max_len=args.max_seq_len)
 model = AutoModelForMaskedLM.from_pretrained(args.hf_model)
+
+if args.freeze_main_model:
+    for name, param in model.named_parameters():
+        if name.startswith(args.model_freeze_prefix):
+            param.requires_grad = False
 
 # move model to GPU if available
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -29,7 +34,7 @@ model.to(device)
 
 # prepare training data
 train_dataset = ShardedTextDataset(
-    args.train_dataset_path, tokenizer, max_seq_length=args.max_len
+    args.train_dataset_path, tokenizer, max_seq_length=args.max_seq_len
 )
 
 # prepare validation data
