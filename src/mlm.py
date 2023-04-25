@@ -20,28 +20,35 @@ with open(args.config, 'r') as config_file:
     config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
 
 # load pretrained model and tokenizer
-tokenizer = AutoTokenizer.from_pretrained(args.hf_model, max_len=args.max_seq_len)
+tokenizer = AutoTokenizer.from_pretrained(args.hf_model)
 model = AutoModelForMaskedLM.from_pretrained(args.hf_model)
 
-if args.freeze_main_model:
+if getattr(args, 'freeze_main_model', False):
     for name, param in model.named_parameters():
         if name.startswith(args.model_freeze_prefix):
             param.requires_grad = False
 
 # move model to GPU if available
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cuda')
 model.to(device)
 
 # prepare training data
-train_dataset = ShardedTextDataset(
-    args.train_dataset_path, tokenizer, max_seq_length=args.max_seq_len
-)
+if getattr(args, 'sharded_train_dataset', False):
+    train_dataset = ShardedTextDataset(
+        args.train_dataset_path, tokenizer, max_seq_length=args.max_seq_len
+    )
+else:
+    train_dataset = LineByLineTextDataset(
+        tokenizer=tokenizer,
+        file_path=args.train_dataset_path,
+        block_size=args.max_seq_len
+    )
 
 # prepare validation data
 val_dataset = LineByLineTextDataset(
     tokenizer=tokenizer,
     file_path=args.val_dataset_path,
-    block_size=args.dataset_block_size,
+    block_size=args.max_seq_len
 )
 
 # initialize trainer class with training configs
