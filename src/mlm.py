@@ -3,8 +3,9 @@ import yaml
 
 import torch
 from transformers import (
-    AutoTokenizer, AutoModelForMaskedLM, LineByLineTextDataset,
-    DataCollatorForLanguageModeling, Trainer, TrainingArguments
+    AutoTokenizer, XLMRobertaTokenizer, AutoModelForMaskedLM,
+    LineByLineTextDataset, DataCollatorForLanguageModeling, Trainer,
+    TrainingArguments
 )
 
 from data import ShardedTextDataset
@@ -20,8 +21,22 @@ with open(args.config, 'r') as config_file:
     config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
 
 # load pretrained model and tokenizer
-tokenizer = AutoTokenizer.from_pretrained(args.hf_model)
 model = AutoModelForMaskedLM.from_pretrained(args.hf_model)
+
+# If using a new vocabulary, load in the vocab model, replace the embedding
+# layer of the model, tie the new weights to the output, and reset vocab size.
+# Otherwise simply load default tokenizer
+if getattr(args, 'new_vocab_file', False):
+    tokenizer = XLMRobertaTokenizer(vocab_file=args.new_vocab_file)
+    new_vocab_size = tokenizer.vocab_size
+    new_embeddings = torch.nn.Embedding(
+        new_vocab_size, model.config.hidden_size
+    )
+    model.set_input_embeddings(new_embeddings)
+    model.tie_weights()
+    model.config.vocab_size = new_vocab_size
+else:
+    tokenizer = AutoTokenizer.from_pretrained(args.hf_model)
 
 if getattr(args, 'freeze_main_model', False):
     for name, param in model.named_parameters():
