@@ -20,6 +20,7 @@ save_steps: 4096
 saved_checkpoints_limit: 4
 
 # advanced training options
+new_vocab_file: tokenizers/caucasus_spm.model
 freeze_main_model: True
 model_freeze_prefix: "roberta.encoder"
 weight_decay: 0.0
