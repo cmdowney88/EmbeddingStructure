@@ -1,5 +1,4 @@
-datasets==2.7.*
-torch==1.13.*
-transformers[torch]==4.20.*
+datasets==2.11.*
+transformers[torch]>=4.20.0
 PyYAML==6.0
-tokenizers==0.13.2
+tokenizers==0.13.*
