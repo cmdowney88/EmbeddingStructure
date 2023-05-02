@@ -3,6 +3,8 @@ import os
 import random
 from pathlib import Path
 
+from tqdm import tqdm
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Break a large data file into a specified number of shards"
@@ -14,15 +16,17 @@ if __name__ == '__main__':
     parser.add_argument('--shuffle_first', action='store_true')
     args = parser.parse_args()
 
+    print("Reading in lines")
     lines = [
         line.strip()
         for line in open(args.input_file, 'r') if line.strip() != ''
     ]
     num_lines = len(lines)
+
     if args.shuffle_first:
+        print("Shuffling lines")
         random.seed(args.seed)
         random.shuffle(lines)
-
 
     quotient, remainder = divmod(num_lines, args.num_shards)
     lower_elements = [quotient for i in range(args.num_shards - remainder)]
@@ -31,7 +35,8 @@ if __name__ == '__main__':
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    for shard_num, shard_length in zip(range(args.num_shards), shard_lengths):
+    print("Writing shards")
+    for shard_num, shard_length in tqdm(zip(range(args.num_shards), shard_lengths), desc="shard progress", unit="shard"):
         filestem = Path(args.input_file).stem
         filename = os.path.join(
             args.output_dir, f'{filestem}_shard{shard_num+1}.txt'
