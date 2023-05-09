@@ -1,6 +1,7 @@
 # Custom
 checkpoints/
 data/
+output/
 tokenizers/
 jhubc-2021-07-08/
 *~
