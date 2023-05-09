@@ -1,7 +1,9 @@
 import argparse
+import os
 import random
 import yaml
 
+from pathlib import Path
 import sentencepiece as spm
 
 # Read training configurations from YAML file
@@ -13,6 +15,9 @@ args = parser.parse_args()
 config_dict = vars(args)
 with open(args.config, 'r') as config_file:
     config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
+
+output_dir = Path(args.output_path).parent
+os.makedirs(output_dir, exist_ok=True)
 
 random.seed(1)
 
