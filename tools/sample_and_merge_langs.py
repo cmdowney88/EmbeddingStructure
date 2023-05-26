@@ -3,6 +3,8 @@ import os
 import random
 import yaml
 
+from tqdm import tqdm
+
 # read training configurations from YAML file
 parser = argparse.ArgumentParser(description="Train tokenizer on raw vocab")
 parser.add_argument('--config', type=str)
@@ -40,6 +42,10 @@ orig_probs = {
     for lang, subdict in lang_data.items()
 }
 
+print("\nOriginal probabilities")
+for lang, prob in orig_probs.items():
+    print(f"{lang}: {round(prob, 4)}")
+
 exponiated_probs = {
     lang: prob**args.alpha
     for lang, prob in orig_probs.items()
@@ -52,6 +58,10 @@ sample_probs = {
     for lang in languages
 }
 
+print("\nUp-/Down-sampled probabilities")
+for lang, prob in sample_probs.items():
+    print(f"{lang}: {round(prob, 4)}")
+
 lambdas = {
     lang: (1 / orig_probs[lang]) * sample_probs[lang]
     for lang in languages
@@ -61,12 +71,12 @@ sample_probs_list = [sample_probs[lang] for lang in languages]
 
 if getattr(args, 'output_length', False):
     output_length = args.output_length
-    print(f"Sampling {output_length} lines to output file")
+    print(f"\nSampling {output_length} lines to output file")
 else:
     output_length = total_length
 
 with open(args.combined_data_output, 'w') as fout:
-    for i in range(output_length):
+    for i in tqdm(range(output_length)):
         sampled_lang = random.choices(languages, weights=sample_probs_list, k=1)[0]
         sampled_line = random.sample(lang_data[sampled_lang]['text'], k=1)[0]
         print(sampled_line, file=fout)
