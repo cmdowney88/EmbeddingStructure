@@ -1,19 +1,23 @@
 # Sentencepiece vocabulary parameters
 tokenizer_model: unigram
-vocab_size: 4096
+vocab_size: 16384
 train_dataset_path: data/combined_vocab_train.txt
 output_path: tokenizers/caucasus_spm
 
 # Paths and alpha for sampling vocab training set
-alpha: 0.5
-combined_data_output: data/combined_vocab_train.txt
+alpha: 0.4
+output_length: 5000000
+combined_data_output: data/multiling_sampled_04_5mil.txt
 data_files:
+    russian:
+        directory: data/indo-european/russian/oscar_10G
+        files: [russian_oscar_sample_shard1.txt, russian_oscar_sample_shard2.txt, russian_oscar_sample_shard3.txt]
     armenian:
         directory: data/indo-european/armenian
         files: [hye_jhubc.txt]
     georgian:
         directory: data/kartvelian/georgian
-        files: [kat_jhubc.txt]
+        files: [kat.txt]
     aghul:
         directory: data/ne_caucasian/aghul
         files: [agx_jhubc.txt]
@@ -59,6 +63,4 @@ data_files:
     turkmen:
         directory: data/turkic/turkmen
         files: [tuk_jhubc.txt]
-    
-    
-    
+

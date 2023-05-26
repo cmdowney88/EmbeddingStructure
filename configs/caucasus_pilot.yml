@@ -1,7 +1,7 @@
 # datasets
-train_dataset_path: "data/indo-european/russian/oscar_10G"
+train_dataset_path: "data/multilingual/caucasus_train"
 sharded_train_dataset: True
-val_dataset_path: "data/indo-european/russian/oscar_10G_val.txt"
+val_dataset_path: "data/multilingual/multiling_sampled_04_5mil_val.txt"
 mlm_masking_prob: 0.15
 max_seq_len: 128
 
@@ -10,13 +10,13 @@ seed: 1
 hf_model: "xlm-roberta-base"
 learning_rate: 5e-5
 training_epochs: 1
-train_batch_size: 32
+train_batch_size: 384
 gradient_accumulation_steps: 1
-eval_strategy: "steps" # no | steps | epoch
-eval_steps: 4096
-eval_batch_size: 64
+eval_strategy: "steps"
+eval_steps: 1024
+eval_batch_size: 384
 checkpoints_directory: "./checkpoints"
-save_steps: 4096
+save_steps: 1024
 saved_checkpoints_limit: 4
 
 # advanced training options
