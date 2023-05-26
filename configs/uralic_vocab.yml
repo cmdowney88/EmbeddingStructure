@@ -24,6 +24,9 @@ data_files:
     estonian:
         directory: data/uralic/estonian/et_oscar
         files: [et_oscar_shard1.txt, et_oscar_shard2.txt, et_oscar_shard3.txt, et_oscar_shard4.txt, et_oscar_shard5.txt, et_oscar_shard6.txt, et_oscar_shard7.txt, et_oscar_shard8.txt, et_oscar_shard9.txt, et_oscar_shard10.txt]
+    erzya:
+        directory: data/uralic/erzya
+        files: [myv_jhubc.txt, myv_wiki.txt]
     ingrian:
         directory: data/uralic/ingrian
         files: [Tatoeba_latest_mono_izh.txt]
@@ -32,13 +35,13 @@ data_files:
         files: [krl_jhubc.txt, krl_wiki.txt]
     komi:
         directory: data/uralic/komi
-        files: [koi_wiki.txt, permyak_wiki.txt, kpv_jhubc.txt, Tatoeba_latest_mono_koi.txt]
+        files: [koi_oscar.txt, koi_wiki.txt, permyak_wiki.txt, kpv_jhubc.txt, Tatoeba_latest_mono_koi.txt]
     livonian:
         directory: data/uralic/livonian
         files: [liv4ever_latest_mono_liv.txt, Tatoeba_latest_mono_liv.txt]
     mari:
         directory: data/uralic/mari
-        files: [mhr_jhubc.txt]
+        files: [mhr_oscar.txt, mhr_jhubc.txt, mrj_oscar.txt]
     moksha:
         directory: data/uralic/moksha
         files: [mdf_wiki.txt]
