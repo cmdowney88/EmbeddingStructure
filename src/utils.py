@@ -3,7 +3,6 @@ import torch
 
 from transformers import (
     WEIGHTS_NAME,
-    PreTrainedTokenizer,
     RobertaConfig,
     RobertaModel,
     RobertaForMaskedLM,
@@ -15,28 +14,19 @@ from transformers import (
     XLMRobertaConfig,
     XLMRobertaModel,
     XLMRobertaForMaskedLM,
-    XLMRobertaTokenizerFast,
-    T5Config,
-    T5EncoderModel,
-    T5TokenizerFast,
-
+    XLMRobertaTokenizerFast
 )
 
 MODEL_CLASSES = {
     "roberta": (RobertaConfig, RobertaModel, RobertaForMaskedLM, RobertaTokenizerFast),
     "bert": (BertConfig, BertModel, BertForMaskedLM, BertTokenizerFast),
-    'xlmr': (XLMRobertaConfig, XLMRobertaModel, XLMRobertaForMaskedLM, XLMRobertaTokenizerFast),
-    't5': (T5Config, T5EncoderModel, None, T5TokenizerFast)
+    'xlmr': (XLMRobertaConfig, XLMRobertaModel, XLMRobertaForMaskedLM, XLMRobertaTokenizerFast)
 }
 
-_model_names = ['bert-base-cased', 'bert-large-cased', 'roberta-base', 'roberta-large', 'xlm-roberta-base', 'xlm-roberta-large', 'bert-base-multilingual-cased', 't5-base']
+_model_names = ['bert-base-cased', 'bert-large-cased', 'roberta-base', 'roberta-large', 'xlm-roberta-base', 'xlm-roberta-large', 'bert-base-multilingual-cased']
 
 _lang_choices = {
-    'pos': ['af', 'ar', 'bg', 'ca', 'cs', 'cy', 'da', 'de', 'el',\
-    'en', 'es', 'et', 'eu', 'fa', 'fi', 'fr', 'ga', 'gd', 'gl', 'fy',\
-    'he', 'hi', 'hr', 'hu', 'hy', 'hyw', 'id', 'is', 'it', 'ja', 'ko',\
-    'la', 'lt', 'lv', 'mt', 'nl', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl',\
-    'sr', 'sv', 'ta', 'tr', 'uk', 'ur', 'vi', 'zh'],
+    'pos-uralic': ['et', 'fi', 'hu', 'no', 'ru'],
     'ppl': ['en', 'de', 'fr', 'ru', 'es', 'it', 'ja', 'zh-cn', 'zh-tw',\
     'pl', 'uk', 'nl', 'sv', 'pt', 'sr', 'hu', 'ca', 'cs', 'fi', 'ar',\
     'ko', 'fa', 'no', 'vi', 'he', 'id', 'ro', 'tr', 'bg', 'et', 'ms',\

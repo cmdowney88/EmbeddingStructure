@@ -304,8 +304,7 @@ def pos(model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50):
             'roberta-base': 16,  #32, 
             'roberta-large': 8,
             'xlm-roberta-base': 16,  #32, 
-            'xlm-roberta-large': 8,
-            't5-base': 16
+            'xlm-roberta-large': 8
         }
 
         # load criterion and optimizer
