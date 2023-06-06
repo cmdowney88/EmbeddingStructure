@@ -65,8 +65,7 @@ def preprocess_ud_word_level(tokenizer, dataset, label_space, layer_id=-1):
                 input_ids = torch.LongTensor(tokens)
                 labels = [
                     torch.LongTensor([label_space.index(l)])
-                    if l in label_space else torch.LongTensor([-100])
-                    for l in label_subset
+                    if l in label_space else torch.LongTensor([-100]) for l in label_subset
                 ]
                 processed_dataset.append((input_ids, alignment, labels))
 
@@ -79,9 +78,7 @@ def preprocess_ud_word_level(tokenizer, dataset, label_space, layer_id=-1):
                 alignment_id = 1  #offset for cls token
 
             tokens.extend(word_ids)
-            word_alignments = [
-                x for x in range(alignment_id, alignment_id + len(word_ids))
-            ]
+            word_alignments = [x for x in range(alignment_id, alignment_id + len(word_ids))]
             alignment_id = alignment_id + len(word_ids)
             alignment.append(word_alignments)
             label_subset.append(label)
@@ -100,17 +97,12 @@ def preprocess_ud_word_level(tokenizer, dataset, label_space, layer_id=-1):
         # filtering out "unlabeled" examples with "_"
         labels = [
             torch.LongTensor([label_space.index(l)])
-            if l in label_space else torch.LongTensor([-100])
-            for l in label_subset
+            if l in label_space else torch.LongTensor([-100]) for l in label_subset
         ]
         processed_dataset.append((input_ids, alignment, labels))
 
     # 1.183 for en train
-    print(
-        'Avg. number of subword pieces per word = {}'.format(
-            num_subwords / num_words
-        )
-    )
+    print('Avg. number of subword pieces per word = {}'.format(num_subwords / num_words))
     return processed_dataset
 
 
@@ -126,9 +118,7 @@ def batchify(data, pad_idx):
     input_ids, alignments, labels = zip(*data)
 
     max_length = max([x.shape[-1] for x in input_ids])
-    input_ids = torch.stack(
-        [_pad_to_len(x, max_length, pad_idx) for x in input_ids], dim=0
-    )
+    input_ids = torch.stack([_pad_to_len(x, max_length, pad_idx) for x in input_ids], dim=0)
 
     flat_labels = []
     for l in labels:
@@ -147,6 +137,8 @@ def train_model(
     pad_idx,
     bsz=1,
     epochs=1,
+    max_train_examples=math.inf,
+    eval_every=2,
     patience=0,
     best_ckpt_path='./model_best.ckpt'
 ):
@@ -155,15 +147,20 @@ def train_model(
 
     max_valid_acc = 0
     patience_step = 0
-    # training epochs
-    for epoch_id in range(0, epochs):
-        random.shuffle(data)
 
+    total_examples = min(len(data), max_train_examples)
+    if total_examples < len(data):
+        random.shuffle(data)
+        data = data[:total_examples]
+
+    # training epochs
+    for epoch_id in tqdm(range(0, epochs), desc='training loop', total=epochs, unit='epoch'):
+        random.shuffle(data)
         train_loss = 0.
 
         # TODO: make this and eval work with new data format (and add feature
         # handling to forward()) go over training data
-        for i in range(0, len(data), bsz):
+        for i in range(0, total_examples, bsz):
             if i + bsz > len(data):
                 batch_data = data[i:]
             else:
@@ -181,22 +178,23 @@ def train_model(
             loss.backward()
             optimizer.step()
 
-        valid_acc = evaluate_model(model, valid_data, pad_idx, bsz=bsz)
+        if ((epoch_id + 1) % eval_every) == 0:
+            valid_acc = evaluate_model(model, valid_data, pad_idx, bsz=bsz)
 
-        # use train loss to see if we need to stop
-        if max_valid_acc > valid_acc:
-            if patience_step == patience:
-                break
+            # use train loss to see if we need to stop
+            if max_valid_acc > valid_acc:
+                if patience_step == patience:
+                    break
+                else:
+                    patience_step += 1
             else:
-                patience_step += 1
-        else:
-            max_valid_acc = valid_acc
-            # checkpoint model
-            torch.save(model.state_dict(), best_ckpt_path)
-            patience_step = 0
+                max_valid_acc = valid_acc
+                # checkpoint model
+                torch.save(model.state_dict(), best_ckpt_path)
+                patience_step = 0
 
     # return model, number of training epochs for best ckpt
-    return model, (epoch_id + 1 - patience_step)
+    return model, (epoch_id + 1 - (patience_step * eval_every))
 
 
 def evaluate_model(model, data, pad_idx, bsz=1):
@@ -229,12 +227,13 @@ def evaluate_model(model, data, pad_idx, bsz=1):
 
 # task expects loose .conllu files for train an valid for the given language in
 # the data_path dir
-def pos(model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50):
+def pos(
+    model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50, max_train_examples=math.inf
+):
+    print(f"Beginning POS evaluation for {lang}")
 
     # load UD train and eval data for probing on given langauge
-    train_text_data, valid_text_data, test_text_data = load_ud_datasets(
-        data_path, lang, task='pos'
-    )
+    train_text_data, valid_text_data, test_text_data = load_ud_datasets(data_path, lang, task='pos')
 
     #DEBUGGING
     #train_data = train_data[:100]
@@ -254,11 +253,7 @@ def pos(model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50):
                 words[w] = [0. for _ in range(len(pos_labels))]
             words[w][pos_labels.index(l)] += 1
 
-    print(
-        'majority label baseline: {}'.format(
-            (max(label_counts) / sum(label_counts)) * 100
-        )
-    )
+    print('majority label baseline: {}'.format((max(label_counts) / sum(label_counts)) * 100))
 
     for w in words:
         words[w] = pos_labels[np.argmax(words[w])]
@@ -270,21 +265,15 @@ def pos(model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50):
                 per_word_maj_correct += 1
             per_word_maj_total += 1
     print(
-        'per word majority baseline: {}'.format(
-            (per_word_maj_correct / per_word_maj_total) * 100
-        )
+        'per word majority baseline: {}'.format((per_word_maj_correct / per_word_maj_total) * 100)
     )
 
     # preprocessing can take in a hidden layer id if we want to probe inside model
-    train_data = preprocess_ud_word_level(
-        tokenizer, train_text_data, pos_labels
-    )
-    valid_data = preprocess_ud_word_level(
-        tokenizer, valid_text_data, pos_labels
-    )
+    train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
+    valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
     test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
 
-    random_seeds = [1, 2, 3, 4, 5]
+    random_seeds = [1, 2, 3, 4]
     scores = []
     epochs = []
     for rand_x in random_seeds:
@@ -303,14 +292,14 @@ def pos(model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50):
             'bert-large-cased': 8,
             'roberta-base': 16,  #32, 
             'roberta-large': 8,
-            'xlm-roberta-base': 16,  #32, 
+            'xlm-roberta-base': 40,  #16, 
             'xlm-roberta-large': 8
         }
 
         # load criterion and optimizer
         tagger_lr = 0.000005
         tagger_bsz = _batch_sizes[args.model_name]
-        patience = 3
+        patience = 2
 
         criterion = torch.nn.CrossEntropyLoss(reduction='mean')
         optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
@@ -325,6 +314,7 @@ def pos(model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50):
             tokenizer.pad_token_id,
             bsz=tagger_bsz,
             epochs=max_epochs,
+            max_train_examples=max_train_examples,
             patience=patience,
             best_ckpt_path=ckpt_path
         )
@@ -333,9 +323,7 @@ def pos(model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50):
         tagger.load_state_dict(torch.load(ckpt_path))
 
         # evaluate on probe model
-        acc = evaluate_model(
-            tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz
-        )
+        acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz)
         acc = acc * 100
         scores.append(acc)
         epochs.append(num_epochs * 1.0)
@@ -344,23 +332,14 @@ def pos(model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50):
         # reinitalize the model for each trial if using randomly initialized encoder
         if args.rand_weights:
             model, tokenizer = load_hf_model(
-                args.model_class,
-                args.model_name,
-                task=args.task,
-                random_weights=args.rand_weights
+                args.model_class, args.model_name, task=args.task, random_weights=args.rand_weights
             )
             model.cuda()
             model.eval()
 
-            train_data = preprocess_ud_word_level(
-                tokenizer, train_text_data, pos_labels
-            )
-            valid_data = preprocess_ud_word_level(
-                tokenizer, valid_text_data, pos_labels
-            )
-            test_data = preprocess_ud_word_level(
-                tokenizer, test_text_data, pos_labels
-            )
+            train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
+            valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
+            test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
 
     mean = sum(scores) / len(scores)
     print('mean score = {}'.format(mean))
@@ -375,27 +354,24 @@ def pos(model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50):
 
 
 def set_up_and_run_task(args):
-
-    # load huggingface model, tokenizer
-    # TODO: make the model being loading an argument
-
-    model, tokenizer = load_hf_model(
-        args.model_class,
-        args.model_name,
-        task=args.task,
-        random_weights=args.rand_weights
-    )
-    model.cuda()
-    model.eval()
-    # Do pos task
-    pos(
-        model,
-        tokenizer,
-        args.dataset_path,
-        args.checkpoint_path,
-        lang=args.lang,
-        max_epochs=args.epochs
-    )
+    # Loop over languages to eval
+    for lang in args.langs:
+        # load huggingface model, tokenizer
+        model, tokenizer = load_hf_model(
+            args.model_class, args.model_name, task=args.task, random_weights=args.rand_weights
+        )
+        model.cuda()
+        model.eval()
+        # Do pos task
+        pos(
+            model,
+            tokenizer,
+            args.dataset_path,
+            args.checkpoint_path,
+            lang=lang,
+            max_epochs=args.epochs,
+            max_train_examples=args.max_train_examples
+        )
 
 
 if __name__ == "__main__":
@@ -417,17 +393,16 @@ if __name__ == "__main__":
         "--dataset_path",
         default=None,
         type=str,
-        help=
-        "Path the dataset to use for evaluation (not needed for perplexity eval)."
+        help="Path the dataset to use for evaluation (not needed for perplexity eval)."
     )
     parser.add_argument(
-        "--lang",
+        '--langs',
+        nargs='*',
         default=None,
         type=str,
-        choices=all_choices,
         required=True,
         help=
-        "Language on which to evaluate the given FairSeq XLMR checkpoint (if not given for ppl, evaluates jointly on all languages in dataset; otherwise required)."
+        "Language on which to evaluate (if not given for ppl, evaluates jointly on all languages in dataset; otherwise required)"
     )
     parser.add_argument(
         "--task",
@@ -437,20 +412,18 @@ if __name__ == "__main__":
         required=True,
         help="Task on which to evaluate the given FairSeq XLMR checkpoint"
     )
-    parser.add_argument(
-        "--model_name", default='bert-base-cased', choices=_model_names
-    )
-    parser.add_argument(
-        "--model_class", default='bert', choices=list(MODEL_CLASSES.keys())
-    )
+    parser.add_argument("--model_name", default='bert-base-cased', choices=_model_names)
+    parser.add_argument("--model_class", default='bert', choices=list(MODEL_CLASSES.keys()))
     parser.add_argument("--rand-weights", action='store_true')
-    parser.add_argument("--rand_seed", default=42, type=int)
+    parser.add_argument("--rand_seed", default=1, type=int)
     parser.add_argument("--epochs", default=50, type=int)
+    parser.add_argument("--max_train_examples", default=100000, type=int)
 
     args = parser.parse_args()
 
     # ensure that given lang matches given task
-    assert args.lang in _lang_choices[args.task]
+    for lang in args.langs:
+        assert lang in _lang_choices[args.task]
 
     # set random seeds
     torch.manual_seed(args.rand_seed)
