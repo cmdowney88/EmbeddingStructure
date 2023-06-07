@@ -8,8 +8,10 @@ import numpy as np
 from tqdm import tqdm
 import copy
 
+from collections import defaultdict
+
 from utils import MODEL_CLASSES, _lang_choices, _task_choices,\
-     _model_names, _label_spaces, load_hf_model, load_ud_datasets,\
+     _model_names, _label_spaces, load_hf_model, load_ud_splits,\
      _consolidate_features
 
 
@@ -225,56 +227,105 @@ def evaluate_model(model, data, pad_idx, bsz=1):
     return num_correct / total_num
 
 
-# task expects loose .conllu files for train an valid for the given language in
-# the data_path dir
-def pos(
-    model, tokenizer, data_path, ckpt_path, lang='en', max_epochs=50, max_train_examples=math.inf
-):
-    print(f"Beginning POS evaluation for {lang}")
-
-    # load UD train and eval data for probing on given langauge
-    train_text_data, valid_text_data, test_text_data = load_ud_datasets(data_path, lang, task='pos')
-
-    #DEBUGGING
-    #train_data = train_data[:100]
-    pos_labels = _label_spaces['UPOS']
-
-    # Get majority sense baseline
+def majority_label_baseline(text_data, label_set):
+    num_labels = len(label_set)
     label_counts = []
     words = {}
-    for _ in range(len(pos_labels)):
+    for _ in range(num_labels):
         label_counts.append(0.)
-    for sent, labels in train_text_data:
+    for sent, labels in text_data:
         for w, l in zip(sent, labels):
             if l == '_':
                 continue
-            label_counts[pos_labels.index(l)] += 1
+            label_counts[label_set.index(l)] += 1
             if w not in words:
-                words[w] = [0. for _ in range(len(pos_labels))]
-            words[w][pos_labels.index(l)] += 1
+                words[w] = [0. for _ in range(num_labels)]
+            words[w][label_set.index(l)] += 1
 
-    print('majority label baseline: {}'.format((max(label_counts) / sum(label_counts)) * 100))
+    return (max(label_counts) / sum(label_counts) * 100, words)
 
+
+def per_word_majority_baseline(text_data, word_label_count, label_set):
+    words = word_label_count
     for w in words:
-        words[w] = pos_labels[np.argmax(words[w])]
+        words[w] = label_set[np.argmax(words[w])]
     per_word_maj_correct = 0.
     per_word_maj_total = 0.
-    for sent, labels in test_text_data:
+    for sent, labels in text_data:
         for w, l in zip(sent, labels):
             if w in words and words[w] == l:
                 per_word_maj_correct += 1
             per_word_maj_total += 1
-    print(
-        'per word majority baseline: {}'.format((per_word_maj_correct / per_word_maj_total) * 100)
-    )
 
-    # preprocessing can take in a hidden layer id if we want to probe inside model
-    train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-    valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
-    test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
+    return per_word_maj_correct / per_word_maj_total * 100
+
+
+def mean_stdev(values):
+    mean = sum(values) / len(values)
+    var = sum([(v - mean)**2 for v in values]) / len(values)
+    std_dev = math.sqrt(var)
+    return mean, std_dev
+
+
+# task expects loose .conllu files for train an valid for the given language in
+# the data_path dir
+def pos(
+    args,
+    model,
+    tokenizer,
+    data_path,
+    ckpt_path,
+    lang='en',
+    max_epochs=50,
+    max_train_examples=math.inf
+):
+    pos_labels = _label_spaces['UPOS']
+    is_zero_shot = hasattr(args, 'zero_shot_transfer', False)
+    has_transfer_source = hasattr(args, 'transfer_source', False)
+    do_zero_shot = is_zero_shot and has_transfer_source
+
+    if do_zero_shot:
+        train_valid_data = load_ud_splits(
+            data_path, args.transfer_source, splits=['train', 'dev'], task='pos'
+        )
+        train_text_data = train_valid_data['train']
+        valid_text_data = train_valid_data['dev']
+        test_text_data = {
+            lg: load_ud_splits(data_path, lg, splits=['test'], task='pos')
+            for lg in args.langs
+        }
+
+        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
+        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
+        test_data = {
+            lg: preprocess_ud_word_level(tokenizer, data, pos_labels)
+            for lg, data in test_text_data.items()
+        }
+
+        scores = defaultdict(list)
+    else:
+        print(f"Beginning POS evaluation for {lang}")
+        # load UD train and eval data for probing on given langauge
+        ud_splits = load_ud_splits(data_path, lang, task='pos')
+        train_text_data, valid_text_data, test_text_data = [
+            ud_splits[x] for x in ['train', 'dev', 'test']
+        ]
+
+        # Get majority sense baseline
+        majority_baseline, words = majority_label_baseline(train_text_data, pos_labels)
+        print(f"majority label baseline: {majority_baseline}")
+
+        per_word_baseline = per_word_majority_baseline(test_text_data, words, pos_labels)
+        print(f"per word majority baseline: {per_word_baseline}")
+
+        # preprocessing can take in a hidden layer id if we want to probe inside model
+        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
+        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
+        test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
+
+        scores = []
 
     random_seeds = [1, 2, 3, 4]
-    scores = []
     epochs = []
     for rand_x in random_seeds:
         # set random seeds for model init, data shuffling
@@ -322,12 +373,23 @@ def pos(
         # load best checkpoint for model state
         tagger.load_state_dict(torch.load(ckpt_path))
 
-        # evaluate on probe model
-        acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz)
-        acc = acc * 100
-        scores.append(acc)
         epochs.append(num_epochs * 1.0)
-        print(acc, num_epochs)
+
+        print(f"random seed: {rand_x}")
+        print(f"num epochs: {num_epochs}")
+
+        # evaluate on probe model
+        if do_zero_shot:
+            for lg in args.langs:
+                acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger.bsz)
+                acc = acc * 100
+                scores[lg].append(acc)
+                print(f"{lg} accuracy: {acc}")
+        else:
+            acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz)
+            acc = acc * 100
+            scores.append(acc)
+            print(f"accuracy: {acc}")
 
         # reinitalize the model for each trial if using randomly initialized encoder
         if args.rand_weights:
@@ -337,23 +399,34 @@ def pos(
             model.cuda()
             model.eval()
 
-            train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-            valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
-            test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
+            if do_zero_shot:
+                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
+                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
+                test_data = {
+                    lg: preprocess_ud_word_level(tokenizer, data, pos_labels)
+                    for lg, data in test_text_data.items()
+                }
+            else:
+                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
+                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
+                test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
 
-    mean = sum(scores) / len(scores)
-    print('mean score = {}'.format(mean))
-    var = sum([(s - mean)**2 for s in scores]) / len(scores)
-    #print('score variance = {}'.format(var))
-    std_dev = math.sqrt(var)
-    print('standard deviation = {}'.format(std_dev))
-    #std_err = math.sqrt(var)/math.sqrt(len(scores))
-    #print('standard error = {}'.format(std_err))
-    mean_epochs = sum(epochs) / len(epochs)
-    print('mean epochs = {}'.format(mean_epochs))
+    print("all trials finished")
+    mean_epochs, epochs_stdev = mean_stdev(epochs)
+    print(f"mean epochs: {mean_epochs}")
+
+    if do_zero_shot:
+        for lg in args.langs:
+            mean_score, score_stdev = mean_stdev(scores[lg])
+            print(f"{lg} mean score: {mean_score}")
+            print(f"{lg} standard deviation: {score_stdev}")
+    else:
+        mean_score, score_stdev = mean_stdev(scores)
+        print(f"mean score: {mean_score}")
+        print(f"standard deviation: {score_stdev}")
 
 
-def set_up_and_run_task(args):
+def set_up_pos(args):
     # Loop over languages to eval
     for lang in args.langs:
         # load huggingface model, tokenizer
@@ -364,6 +437,7 @@ def set_up_and_run_task(args):
         model.eval()
         # Do pos task
         pos(
+            args,
             model,
             tokenizer,
             args.dataset_path,
@@ -372,6 +446,25 @@ def set_up_and_run_task(args):
             max_epochs=args.epochs,
             max_train_examples=args.max_train_examples
         )
+
+
+def set_up_pos_zero_shot(args):
+    # load huggingface model, tokenizer
+    model, tokenizer = load_hf_model(
+        args.model_class, args.model_name, task=args.task, random_weights=args.rand_weights
+    )
+    model.cuda()
+    model.eval()
+    # Do pos task
+    pos(
+        args,
+        model,
+        tokenizer,
+        args.dataset_path,
+        args.checkpoint_path,
+        max_epochs=args.epochs,
+        max_train_examples=args.max_train_examples
+    )
 
 
 if __name__ == "__main__":
@@ -435,6 +528,6 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-    set_up_and_run_task(args)
+    set_up_pos(args)
 
 #EOF

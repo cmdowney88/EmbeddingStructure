@@ -118,31 +118,20 @@ def _load_ud_text(file_path):
     return dataset
 
 
-def load_ud_datasets(data_path, lang, task='pos'):
+def load_ud_splits(data_path, lang, splits=['train', 'dev', 'test'], task='pos'):
     ud_files = os.listdir(data_path)
-    train_file = [u for u in ud_files if u.startswith(lang + '_') and '-train' in u]
-    valid_file = [u for u in ud_files if u.startswith(lang + '_') and '-dev' in u]
-    test_file = [u for u in ud_files if u.startswith(lang + '_') and '-test' in u]
-    assert len(train_file) == 1 and len(valid_file) == 1 and len(test_file) == 1
+    split_data = {}
+    for split_name in splits:
+        split_file = [u for u in ud_files if u.startswith(lang + '_') and f'-{split_name}' in u]
+        assert len(split_file) == 1
+        split_file = split_file[0]
+        split_path = os.path.join(data_path, split_file)
+        if task == 'ppl':
+            split_data[split_name] = _load_ud_text(split_path)
+        else:
+            split_data[split_name] = _load_word_level_ud(split_path, task)
 
-    train_file = train_file[0]
-    valid_file = valid_file[0]
-    test_file = test_file[0]
-
-    train_path = os.path.join(data_path, train_file)
-    valid_path = os.path.join(data_path, valid_file)
-    test_path = os.path.join(data_path, test_file)
-
-    if task == 'ppl':
-        train_data = _load_ud_text(train_path)
-        valid_data = _load_ud_text(valid_path)
-        test_data = _load_ud_text(test_path)
-    else:
-        train_data = _load_word_level_ud(train_path, task)
-        valid_data = _load_word_level_ud(valid_path, task)
-        test_data = _load_word_level_ud(test_path, task)
-
-    return train_data, valid_data, test_data
+    return split_data if len(splits) > 1 else split_data[splits[0]]
 
 
 # averaging outputs for subword units
