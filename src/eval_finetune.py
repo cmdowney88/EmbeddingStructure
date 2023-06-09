@@ -194,7 +194,7 @@ def train_model(
             else:
                 max_valid_acc = valid_acc
                 # checkpoint model
-                torch.save(model.state_dict(), best_ckpt_path)
+                torch.save(model.state_dict(), best_ckpt_path + "/best_model.pt")
                 patience_step = 0
 
     # return model, number of training epochs for best ckpt
@@ -315,10 +315,10 @@ def pos(
 
         # Get majority sense baseline
         majority_baseline, words = majority_label_baseline(train_text_data, pos_labels)
-        print(f"majority label baseline: {majority_baseline}")
+        print(f"majority label baseline: {round(majority_baseline, 2)}")
 
         per_word_baseline = per_word_majority_baseline(test_text_data, words, pos_labels)
-        print(f"per word majority baseline: {per_word_baseline}")
+        print(f"per word majority baseline: {round(per_word_baseline, 2)}")
 
         # preprocessing can take in a hidden layer id if we want to probe inside model
         train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
@@ -342,7 +342,7 @@ def pos(
         # load criterion and optimizer
         tagger_lr = 0.000005
         tagger_bsz = args.batch_size
-        patience = 1
+        patience = 2
 
         criterion = torch.nn.CrossEntropyLoss(reduction='mean')
         optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
@@ -363,7 +363,7 @@ def pos(
         )
 
         # load best checkpoint for model state
-        tagger.load_state_dict(torch.load(ckpt_path))
+        tagger.load_state_dict(torch.load(ckpt_path + "/best_model.pt"))
 
         epochs.append(num_epochs * 1.0)
 
@@ -473,6 +473,12 @@ if __name__ == "__main__":
     config_dict = vars(args)
     with open(args.config, 'r') as config_file:
         config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
+
+    os.makedirs(args.checkpoint_path, exist_ok=True)
+    
+    # Set max_train_examples to infinity it is is null or absent in config
+    if not getattr(args, 'max_train_examples', False):
+        args.max_train_examples = math.inf
 
     # ensure that given lang matches given task
     for lang in args.langs:
