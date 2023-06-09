@@ -1,18 +1,20 @@
 import argparse
-import torch
-from torch.nn import functional as F
+import copy
+import math
 import os
 import random
-import math
-import numpy as np
-from tqdm import tqdm
-import copy
-
 from collections import defaultdict
 
-from utils import MODEL_CLASSES, _lang_choices, _task_choices,\
-     _model_names, _label_spaces, load_hf_model, load_ud_splits,\
-     _consolidate_features
+import numpy as np
+import torch
+import yaml
+from torch.nn import functional as F
+from tqdm import tqdm
+
+from utils import (
+    MODEL_CLASSES, _consolidate_features, _label_spaces, _lang_choices, _model_names, _task_choices,
+    load_hf_model, load_ud_splits
+)
 
 
 class Tagger(torch.nn.Module):
@@ -382,9 +384,9 @@ def pos(
             print(f"accuracy: {round(acc, 2)}")
 
         # reinitalize the model for each trial if using randomly initialized encoder
-        if args.rand_weights:
+        if args.random_weights:
             model, tokenizer = load_hf_model(
-                args.model_class, args.model_name, task=args.task, random_weights=args.rand_weights
+                args.model_class, args.model_name, task=args.task, random_weights=args.random_weights
             )
             model.cuda()
             model.eval()
@@ -421,7 +423,7 @@ def set_up_pos(args):
     for lang in args.langs:
         # load huggingface model, tokenizer
         model, tokenizer = load_hf_model(
-            args.model_class, args.model_name, task=args.task, random_weights=args.rand_weights
+            args.model_class, args.model_name, task=args.task, random_weights=args.random_weights
         )
         model.cuda()
         model.eval()
@@ -441,7 +443,7 @@ def set_up_pos(args):
 def set_up_pos_zero_shot(args):
     # load huggingface model, tokenizer
     model, tokenizer = load_hf_model(
-        args.model_class, args.model_name, task=args.task, random_weights=args.rand_weights
+        args.model_class, args.model_name, task=args.task, random_weights=args.random_weights
     )
     model.cuda()
     model.eval()
@@ -466,58 +468,23 @@ if __name__ == "__main__":
         all_choices.extend(v)
 
     # required parameters
-    parser.add_argument(
-        "--checkpoint_path",
-        default='./model_best.ckpt',
-        type=str,
-        help="Path to where the best model ckpt is saved"
-    )
-    parser.add_argument(
-        "--dataset_path",
-        default=None,
-        type=str,
-        help="Path the dataset to use for evaluation (not needed for perplexity eval)."
-    )
-    parser.add_argument(
-        '--langs',
-        nargs='*',
-        default=None,
-        type=str,
-        required=True,
-        help=
-        "Language on which to evaluate (if not given for ppl, evaluates jointly on all languages in dataset; otherwise required)"
-    )
-    parser.add_argument(
-        "--task",
-        default=None,
-        type=str,
-        choices=_task_choices,
-        required=True,
-        help="Task on which to evaluate the given FairSeq XLMR checkpoint"
-    )
-    parser.add_argument("--model_name", default='bert-base-cased', choices=_model_names)
-    parser.add_argument("--model_class", default='bert', choices=list(MODEL_CLASSES.keys()))
-    parser.add_argument("--zero_shot_transfer", action='store_true')
-    parser.add_argument("--transfer_source", default=None, type=str)
-    parser.add_argument("--rand-weights", action='store_true')
-    parser.add_argument("--rand_seed", default=1, type=int)
-    parser.add_argument("--epochs", default=50, type=int)
-    parser.add_argument("--batch_size", default=32, type=int)
-    parser.add_argument("--max_train_examples", default=100000, type=int)
-
+    parser.add_argument('--config', type=str)
     args = parser.parse_args()
+    config_dict = vars(args)
+    with open(args.config, 'r') as config_file:
+        config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
 
     # ensure that given lang matches given task
     for lang in args.langs:
         assert lang in _lang_choices[args.task]
 
     # set random seeds
-    torch.manual_seed(args.rand_seed)
-    os.environ['PYTHONHASHSEED'] = str(args.rand_seed)
-    torch.cuda.manual_seed(args.rand_seed)
-    torch.cuda.manual_seed_all(args.rand_seed)
-    np.random.seed(args.rand_seed)
-    random.seed(args.rand_seed)
+    torch.manual_seed(args.random_seed)
+    os.environ['PYTHONHASHSEED'] = str(args.random_seed)
+    torch.cuda.manual_seed(args.random_seed)
+    torch.cuda.manual_seed_all(args.random_seed)
+    np.random.seed(args.random_seed)
+    random.seed(args.random_seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
