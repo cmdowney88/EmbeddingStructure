@@ -8,6 +8,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_file', type=str, required=True)
     parser.add_argument('--output_file', type=str, required=True)
     parser.add_argument('--output_size', type=int, required=True)
+    parser.add_argument('--just_print_length', action='store_true')
     args = parser.parse_args()
 
     random.seed(1)
@@ -24,6 +25,10 @@ if __name__ == '__main__':
             continue
         else:
             current_sentence.append(line)
+
+    if args.just_print_length:
+        print(len(sentences))
+        exit(0)
 
     random.shuffle(sentences)
 
