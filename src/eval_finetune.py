@@ -104,7 +104,7 @@ def preprocess_ud_word_level(tokenizer, dataset, label_space, layer_id=-1):
         processed_dataset.append((input_ids, alignment, labels))
 
     # 1.183 for en train
-    print('Avg. number of subword pieces per word = {}'.format(num_subwords / num_words))
+    # print('Avg. number of subword pieces per word = {}'.format(num_subwords / num_words))
     return processed_dataset
 
 
@@ -280,8 +280,8 @@ def pos(
     max_train_examples=math.inf
 ):
     pos_labels = _label_spaces['UPOS']
-    is_zero_shot = hasattr(args, 'zero_shot_transfer', False)
-    has_transfer_source = hasattr(args, 'transfer_source', False)
+    is_zero_shot = getattr(args, 'zero_shot_transfer', False)
+    has_transfer_source = getattr(args, 'transfer_source', False)
     do_zero_shot = is_zero_shot and has_transfer_source
 
     if do_zero_shot:
@@ -337,20 +337,10 @@ def pos(
         # create probe model
         tagger = Tagger(model, len(pos_labels))
 
-        _batch_sizes = {
-            'bert-base-cased': 16,  #32, 
-            'bert-base-multilingual-cased': 16,  #32,
-            'bert-large-cased': 8,
-            'roberta-base': 16,  #32, 
-            'roberta-large': 8,
-            'xlm-roberta-base': 40,  #16, 
-            'xlm-roberta-large': 8
-        }
-
         # load criterion and optimizer
         tagger_lr = 0.000005
-        tagger_bsz = _batch_sizes[args.model_name]
-        patience = 2
+        tagger_bsz = args.batch_size
+        patience = 1
 
         criterion = torch.nn.CrossEntropyLoss(reduction='mean')
         optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
@@ -381,15 +371,15 @@ def pos(
         # evaluate on probe model
         if do_zero_shot:
             for lg in args.langs:
-                acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger.bsz)
+                acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz)
                 acc = acc * 100
                 scores[lg].append(acc)
-                print(f"{lg} accuracy: {acc}")
+                print(f"{lg} accuracy: {round(acc, 2)}")
         else:
             acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz)
             acc = acc * 100
             scores.append(acc)
-            print(f"accuracy: {acc}")
+            print(f"accuracy: {round(acc, 2)}")
 
         # reinitalize the model for each trial if using randomly initialized encoder
         if args.rand_weights:
@@ -413,17 +403,17 @@ def pos(
 
     print("all trials finished")
     mean_epochs, epochs_stdev = mean_stdev(epochs)
-    print(f"mean epochs: {mean_epochs}")
+    print(f"mean epochs: {round(mean_epochs, 2)}")
 
     if do_zero_shot:
         for lg in args.langs:
             mean_score, score_stdev = mean_stdev(scores[lg])
-            print(f"{lg} mean score: {mean_score}")
-            print(f"{lg} standard deviation: {score_stdev}")
+            print(f"{lg} mean score: {round(mean_score, 2)}")
+            print(f"{lg} standard deviation: {round(score_stdev, 2)}")
     else:
         mean_score, score_stdev = mean_stdev(scores)
-        print(f"mean score: {mean_score}")
-        print(f"standard deviation: {score_stdev}")
+        print(f"mean score: {round(mean_score, 2)}")
+        print(f"standard deviation: {round(score_stdev, 2)}")
 
 
 def set_up_pos(args):
@@ -507,9 +497,12 @@ if __name__ == "__main__":
     )
     parser.add_argument("--model_name", default='bert-base-cased', choices=_model_names)
     parser.add_argument("--model_class", default='bert', choices=list(MODEL_CLASSES.keys()))
+    parser.add_argument("--zero_shot_transfer", action='store_true')
+    parser.add_argument("--transfer_source", default=None, type=str)
     parser.add_argument("--rand-weights", action='store_true')
     parser.add_argument("--rand_seed", default=1, type=int)
     parser.add_argument("--epochs", default=50, type=int)
+    parser.add_argument("--batch_size", default=32, type=int)
     parser.add_argument("--max_train_examples", default=100000, type=int)
 
     args = parser.parse_args()
@@ -528,6 +521,12 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-    set_up_pos(args)
+    if args.zero_shot_transfer and args.transfer_source:
+        print(
+            f"Doing zero-shot transfer from source {args.transfer_source} to languages {', '.join(args.langs)}"
+        )
+        set_up_pos_zero_shot(args)
+    else:
+        set_up_pos(args)
 
 #EOF

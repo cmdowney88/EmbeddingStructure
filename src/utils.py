@@ -19,7 +19,7 @@ _model_names = [
 ]
 
 _lang_choices = {
-    'pos': ['et', 'fi', 'hu', 'no', 'ru'],
+    'pos': ['et', 'fi', 'hu', 'no', 'ru', 'kpv', 'krl', 'mdf', 'myv', 'olo', 'sme', 'sms'],
     'ppl': ['en', 'de', 'fr', 'ru', 'es', 'it', 'ja', 'zh-cn', 'zh-tw',\
     'pl', 'uk', 'nl', 'sv', 'pt', 'sr', 'hu', 'ca', 'cs', 'fi', 'ar',\
     'ko', 'fa', 'no', 'vi', 'he', 'id', 'ro', 'tr', 'bg', 'et', 'ms',\
@@ -80,7 +80,9 @@ def _load_word_level_ud(file_path, task):
             if line.startswith('#'):
                 continue
             if len(line) == 0:
-                dataset.append((example_sent, example_labels))
+                # Make sure not to append blank example after more than one blank line
+                if len(example_sent) > 0:
+                    dataset.append((example_sent, example_labels))
                 example_sent = []
                 example_labels = []
             else:
