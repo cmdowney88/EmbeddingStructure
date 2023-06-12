@@ -7,7 +7,6 @@ COMBINED_FILE="${OUTPUT_NAME}_combined.txt"
 COMBINED_CLEANED_FILE="${OUTPUT_NAME}_combined_cleaned.txt"
 
 # Make the combined data file blank, and remove the output file if it already exists
-touch $COMBINED_FILE
 echo -n > $COMBINED_FILE
 rm -f $COMBINED_CLEANED_FILE
 
@@ -29,7 +28,7 @@ then
     opusfilter-cmd filter --inputs '["'${OUTPUT_NAME}_dedup_tmp.txt'"]' --outputs '["'${OUTPUT_NAME}_noneng_tmp.txt'"]' --filterfalse True --filters \
     '[{"LanguageIDFilter": {"languages": ["en"], "thresholds": [0.9]}}]'
 else
-    cat ${OUTPUT_NAME}_dedup_tmp.txt > ${OUTPUT_NAME}_noneng_tmp.txt
+    cp ${OUTPUT_NAME}_dedup_tmp.txt ${OUTPUT_NAME}_noneng_tmp.txt
     echo "Not filtering out English sentences"
 fi
 
