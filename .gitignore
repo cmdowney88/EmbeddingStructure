@@ -4,6 +4,7 @@ data/
 output/
 tokenizers/
 opus/
+OpusFilter/
 *~
 .DS_Store
 
