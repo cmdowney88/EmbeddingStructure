@@ -21,7 +21,7 @@ done
 # This package primarily wants to work with JSON configs, which doesn't play nicely with shell
 # interpolation. Single quotes indicate the beginning of a literal JSON object. Variable
 # interpolation is not allowed within single quotes, thus the ugly '["' components
-# opusfilter-cmd remove_duplicates --inputs '["'${COMBINED_FILE}'"]' --outputs '["'${OUTPUT_NAME}_dedup_tmp.txt'"]' --lowercase True --letters_only True
+opusfilter-cmd remove_duplicates --inputs '["'${COMBINED_FILE}'"]' --outputs '["'${OUTPUT_NAME}_dedup_tmp.txt'"]' --lowercase True --letters_only True
 
 # Use a language ID filter to keep only those sentences which are NOT identified as English
 if [ $FILTER_ENGLISH -gt 0 ]
