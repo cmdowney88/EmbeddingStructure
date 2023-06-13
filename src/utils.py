@@ -4,7 +4,7 @@ import torch
 from transformers import (
     WEIGHTS_NAME, RobertaConfig, RobertaModel, RobertaForMaskedLM, RobertaTokenizerFast, BertConfig,
     BertModel, BertForMaskedLM, BertTokenizerFast, XLMRobertaConfig, XLMRobertaModel,
-    XLMRobertaForMaskedLM, XLMRobertaTokenizerFast
+    XLMRobertaForMaskedLM, XLMRobertaTokenizerFast, XLMRobertaTokenizer
 )
 
 MODEL_CLASSES = {
@@ -41,18 +41,21 @@ _label_spaces = {
 
 
 #loads tokenizer and model based on given model type and name
-def load_hf_model(model_type, model_name, task='ppl', random_weights=False):
+def load_hf_model(model_type, model_name, task='ppl', random_weights=False, tokenizer_path=None):
     config_class, model_class, lm_class, tokenizer_class = MODEL_CLASSES[model_type]
     config = config_class.from_pretrained(
         model_name,
         cache_dir=None,
     )
 
-    tokenizer = tokenizer_class.from_pretrained(
-        model_name,
-        do_lower_case=False,
-        cache_dir=None,
-    )
+    if tokenizer_path:
+        tokenizer = XLMRobertaTokenizerFast(vocab_file=tokenizer_path)
+    else:
+        tokenizer = tokenizer_class.from_pretrained(
+            model_name,
+            do_lower_case=False,
+            cache_dir=None,
+        )
 
     if task == 'ppl':
         model_class = lm_class

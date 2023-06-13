@@ -386,7 +386,10 @@ def pos(
         # reinitalize the model for each trial if using randomly initialized encoder
         if args.random_weights:
             model, tokenizer = load_hf_model(
-                args.model_class, args.model_name, task=args.task, random_weights=args.random_weights
+                args.model_class,
+                args.model_name,
+                task=args.task,
+                random_weights=args.random_weights
             )
             model.cuda()
             model.eval()
@@ -423,7 +426,11 @@ def set_up_pos(args):
     for lang in args.langs:
         # load huggingface model, tokenizer
         model, tokenizer = load_hf_model(
-            args.model_class, args.model_name, task=args.task, random_weights=args.random_weights
+            args.model_class,
+            args.model_name,
+            task=args.task,
+            random_weights=args.random_weights,
+            tokenizer_path=args.tokenizer_path
         )
         model.cuda()
         model.eval()
@@ -443,7 +450,11 @@ def set_up_pos(args):
 def set_up_pos_zero_shot(args):
     # load huggingface model, tokenizer
     model, tokenizer = load_hf_model(
-        args.model_class, args.model_name, task=args.task, random_weights=args.random_weights
+        args.model_class,
+        args.model_name,
+        task=args.task,
+        random_weights=args.random_weights,
+        tokenizer_path=args.tokenizer_path
     )
     model.cuda()
     model.eval()
@@ -475,10 +486,12 @@ if __name__ == "__main__":
         config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
 
     os.makedirs(args.checkpoint_path, exist_ok=True)
-    
+
     # Set max_train_examples to infinity it is is null or absent in config
     if not getattr(args, 'max_train_examples', False):
         args.max_train_examples = math.inf
+
+    args.tokenizer_path = getattr(args, 'tokenizer_path', None)
 
     # ensure that given lang matches given task
     for lang in args.langs:
