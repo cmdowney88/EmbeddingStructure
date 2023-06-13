@@ -1,8 +1,8 @@
 # Sentencepiece vocabulary parameters
 tokenizer_model: unigram
-vocab_size: 16384
+vocab_size: 32768
 train_dataset_path: data/uralic_vocab_train_alpha02_5mil.txt
-output_path: tokenizers/uralic_spm
+output_path: tokenizers/uralic_spm_32k
 
 # Paths and alpha for sampling vocab training set
 alpha: 0.2
@@ -10,50 +10,58 @@ output_length: 5000000
 combined_data_output: data/uralic_vocab_train_alpha02_5mil.txt
 data_files:
     russian:
-        directory: data/indo-european/russian/oscar_10G
-        files: [russian_oscar_sample_shard1.txt, russian_oscar_sample_shard2.txt, russian_oscar_sample_shard3.txt]
-    norwegian:
-        directory: data/indo-european/norwegian
-        files: [no_oscar.txt]
+        directory: data/indo-european/russian/ru_oscar_cleaned
+        files: [ru_oscar_cleaned_shard1.txt, ru_oscar_cleaned_shard2.txt,
+            ru_oscar_cleaned_shard3.txt, ru_oscar_cleaned_shard4.txt, ru_oscar_cleaned_shard5.txt,
+            ru_oscar_cleaned_shard6.txt, ru_oscar_cleaned_shard7.txt, ru_oscar_cleaned_shard8.txt,
+            ru_oscar_cleaned_shard9.txt, ru_oscar_cleaned_shard10.txt]
     hungarian:
-        directory: data/uralic/hungarian/hu_oscar
-        files: [hu_oscar_shard1.txt, hu_oscar_shard2.txt]
+        directory: data/uralic/hungarian/hu_oscar_cleaned
+        files: [hu_oscar_cleaned_shard1.txt, hu_oscar_cleaned_shard2.txt,
+            hu_oscar_cleaned_shard3.txt, hu_oscar_cleaned_shard4.txt]
     finnish:
-        directory: data/uralic/finnish/fi_oscar
-        files: [fi_oscar_shard1.txt, fi_oscar_shard2.txt]
+        directory: data/uralic/finnish/fi_oscar_cleaned
+        files: [fi_oscar_cleaned_shard1.txt, fi_oscar_cleaned_shard2.txt,
+            fi_oscar_cleaned_shard3.txt, fi_oscar_cleaned_shard4.txt]
     estonian:
-        directory: data/uralic/estonian/et_oscar
-        files: [et_oscar_shard1.txt, et_oscar_shard2.txt, et_oscar_shard3.txt, et_oscar_shard4.txt, et_oscar_shard5.txt, et_oscar_shard6.txt, et_oscar_shard7.txt, et_oscar_shard8.txt, et_oscar_shard9.txt, et_oscar_shard10.txt]
+        directory: data/uralic/estonian/et_oscar_cleaned
+        files: [et_oscar_cleaned_shard1.txt, et_oscar_cleaned_shard2.txt, 
+            et_oscar_cleaned_shard3.txt, et_oscar_cleaned_shard4.txt, et_oscar_cleaned_shard5.txt,
+            et_oscar_cleaned_shard6.txt, et_oscar_cleaned_shard7.txt, et_oscar_cleaned_shard8.txt,
+            et_oscar_cleaned_shard9.txt, et_oscar_cleaned_shard10.txt]
+    erzya:
+        directory: data/uralic/erzya
+        files: [myv_combined_cleaned.txt]
     ingrian:
         directory: data/uralic/ingrian
-        files: [Tatoeba_latest_mono_izh.txt]
+        files: [izh_combined_cleaned.txt]
     karelian:
         directory: data/uralic/karelian
-        files: [krl_jhubc.txt, krl_wiki.txt]
+        files: [krl_combined_cleaned.txt]
     komi:
         directory: data/uralic/komi
-        files: [koi_wiki.txt, permyak_wiki.txt, kpv_jhubc.txt, Tatoeba_latest_mono_koi.txt]
+        files: [koi_combined_cleaned.txt]
     livonian:
         directory: data/uralic/livonian
-        files: [liv4ever_latest_mono_liv.txt, Tatoeba_latest_mono_liv.txt]
+        files: [liv_combined_cleaned.txt]
     mari:
         directory: data/uralic/mari
-        files: [mhr_jhubc.txt]
+        files: [mhr_combined_cleaned.txt]
     moksha:
         directory: data/uralic/moksha
-        files: [mdf_wiki.txt]
+        files: [mdf_combined_cleaned.txt]
     sami:
         directory: data/uralic/sami
-        files: [KDE4_latest_mono_se.txt, sami_wiki.txt, sme_jhubc.txt, Tatoeba_latest_mono_se.txt, Ubuntu_latest_mono_se.txt, wikimedia_latest_mono_se.txt]
+        files: [sami_combined_cleaned.txt]
     udmurt:
         directory: data/uralic/udmurt
-        files: [udm_jhubc.txt, udm_wiki.txt, Tatoeba_latest_mono_udm.txt, wikimedia_latest_mono_udm.txt]
+        files: [udm_combined_cleaned.txt]
     veps:
         directory: data/uralic/veps
-        files: [veps_wiki.txt, Tatoeba_latest_mono_vep.txt, wikimedia_latest_mono_vep.txt]
-    ingrian:
+        files: [vep_combined_cleaned.txt]
+    votic:
         directory: data/uralic/votic
-        files: [Mozilla-I10n_latest_mono_vot.txt]
+        files: [vot_combined_cleaned.txt]
 
     
     
