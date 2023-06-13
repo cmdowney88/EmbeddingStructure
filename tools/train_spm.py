@@ -35,5 +35,5 @@ spm.SentencePieceTrainer.Train(
     unk_piece='[UNK]',
     user_defined_symbols='[MASK]',
     model_type=args.tokenizer_model,
-    character_coverage=1.0
+    character_coverage=0.999
 )
