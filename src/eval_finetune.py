@@ -18,6 +18,11 @@ from utils import (
 
 
 class Tagger(torch.nn.Module):
+    """
+    Tagger class for conducting classification with a pre-trained model. Takes in the pre-trained
+    model as the `encoder` argument on initialization. The tagger/classification-head itself
+    consists of a single linear layer + softmax
+    """
     def __init__(self, encoder, output_dim):
         super(Tagger, self).__init__()
 
@@ -42,6 +47,11 @@ class Tagger(torch.nn.Module):
 
 
 def preprocess_ud_word_level(tokenizer, dataset, label_space, layer_id=-1):
+    """
+    Pre-process the text data from a UD dataset using a huggingface tokenizer, keeping track of the
+    mapping between word and subword tokenizations. Break up sentences in the dataset that are
+    longer than 511 tokens
+    """
     processed_dataset = []
 
     num_subwords = 0.
@@ -58,7 +68,6 @@ def preprocess_ud_word_level(tokenizer, dataset, label_space, layer_id=-1):
         alignment_id = 1  #offset for cls token
         for word, label in zip(sentence, labels):
             word_ids = tokenizer.encode(' ' + word, add_special_tokens=False)
-
             if len(tokens) + len(word_ids) > 511:
                 # add example to dataset
                 if tokenizer.cls_token_id != None:
@@ -230,6 +239,11 @@ def evaluate_model(model, data, pad_idx, bsz=1):
 
 
 def majority_label_baseline(text_data, label_set):
+    """
+    Return the majority-label baseline for a text dataset of sentences and their respective
+    word-wise labels. Majority-label baseline is the accuracy achieved if a model predicts only the
+    most common label
+    """
     num_labels = len(label_set)
     label_counts = []
     words = {}
@@ -248,6 +262,11 @@ def majority_label_baseline(text_data, label_set):
 
 
 def per_word_majority_baseline(text_data, word_label_count, label_set):
+    """
+    Return the per-word majority-label baseline for a text dataset of sentences and their respective
+    word-wise labels. Per-word majority-label baseline is the accuracy achieved if a model predicts
+    the most common label for each token
+    """
     words = word_label_count
     for w in words:
         words[w] = label_set[np.argmax(words[w])]
@@ -263,6 +282,9 @@ def per_word_majority_baseline(text_data, word_label_count, label_set):
 
 
 def mean_stdev(values):
+    """
+    Return the mean and standard deviation of the input list of values
+    """
     mean = sum(values) / len(values)
     var = sum([(v - mean)**2 for v in values]) / len(values)
     std_dev = math.sqrt(var)
@@ -281,11 +303,21 @@ def pos(
     max_epochs=50,
     max_train_examples=math.inf
 ):
+    """
+    Conduct fine-tuning and evaluation for a POS tagging task. Fine-tune the model on four different
+    random seeds per training set. If `args.zero_shot_transfer` is true and
+    `args.transfer_source` is specified, conduct zero-shot transfer. Zero-shot transfer assumes that
+    only test set(s) are available for the language(s) being evaluated. If doing zero-shot,
+    fine-tune the model on the training/dev sets available for `args.transfer_source`, then loop
+    over the specified language test sets at eval time
+    """
     pos_labels = _label_spaces['UPOS']
     is_zero_shot = getattr(args, 'zero_shot_transfer', False)
     has_transfer_source = getattr(args, 'transfer_source', False)
     do_zero_shot = is_zero_shot and has_transfer_source
 
+    # If doing zero-shot transfer, load the train and dev sets for `args.transfer_source` and load
+    # the test set for each of the languages in `args.langs`. Pre-process the UD data
     if do_zero_shot:
         train_valid_data = load_ud_splits(
             data_path, args.transfer_source, splits=['train', 'dev'], task='pos'
@@ -305,6 +337,8 @@ def pos(
         }
 
         scores = defaultdict(list)
+    # If not doing zero-shot transfer, pre-process the train, dev, and test sets for the language
+    # in question. Also get and log the majority label baselines
     else:
         print(f"Beginning POS evaluation for {lang}")
         # load UD train and eval data for probing on given langauge
@@ -347,7 +381,7 @@ def pos(
         criterion = torch.nn.CrossEntropyLoss(reduction='mean')
         optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
 
-        # train probe model
+        # train classification model
         tagger, num_epochs = train_model(
             tagger,
             train_data,
@@ -370,7 +404,7 @@ def pos(
         print(f"random seed: {rand_x}")
         print(f"num epochs: {num_epochs}")
 
-        # evaluate on probe model
+        # evaluate classificaiton model
         if do_zero_shot:
             for lg in args.langs:
                 acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz)
@@ -422,6 +456,10 @@ def pos(
 
 
 def set_up_pos(args):
+    """
+    For each language being evaluated, set up POS tagging task by loading a huggingface
+    model/tokenizer then calling the `pos` function
+    """
     # Loop over languages to eval
     for lang in args.langs:
         # load huggingface model, tokenizer
@@ -448,6 +486,11 @@ def set_up_pos(args):
 
 
 def set_up_pos_zero_shot(args):
+    """
+    Set up POS tagging task by loading a huggingface model/tokenizer then calling the `pos`
+    function. Unlike `set_up_pos`, the loop over evaluation languages occurs inside the `pos`
+    function in the zero-shot case, since the model is fine-tuned only on `transfer-source`
+    """
     # load huggingface model, tokenizer
     model, tokenizer = load_hf_model(
         args.model_class,
@@ -487,7 +530,7 @@ if __name__ == "__main__":
 
     os.makedirs(args.checkpoint_path, exist_ok=True)
 
-    # Set max_train_examples to infinity it is is null or absent in config
+    # set max_train_examples to infinity it is is null or absent in config
     if not getattr(args, 'max_train_examples', False):
         args.max_train_examples = math.inf
 
@@ -507,6 +550,9 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
+    # Normal POS eval assumes a train, dev, and test set for each language being evaluated.
+    # Zero-shot POS assumes a test set is available for each language in question, and that
+    # train/dev sets are availalble for `args.transfer_source`
     if args.zero_shot_transfer and args.transfer_source:
         print(
             f"Doing zero-shot transfer from source {args.transfer_source} to languages {', '.join(args.langs)}"
