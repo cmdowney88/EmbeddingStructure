@@ -1,10 +1,10 @@
 # Custom
-checkpoints/
+models/
 data/
 output/
 tokenizers/
-jhubc-2021-07-08/
 opus/
+OpusFilter/
 *~
 .DS_Store
 
