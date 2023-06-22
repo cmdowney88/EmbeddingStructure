@@ -62,8 +62,3 @@ data_files:
     votic:
         directory: data/uralic/votic
         files: [vot_combined_cleaned.txt]
-
-    
-    
-    
-
