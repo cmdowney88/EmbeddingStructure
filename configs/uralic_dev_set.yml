@@ -1,0 +1,49 @@
+# Paths and alpha for sampling dev set
+alpha: 0.4
+output_length: 100000
+combined_data_output: data/multilingual/uralic_dev_alpha04.txt
+data_files:
+    russian:
+        directory: data/indo-european/russian
+        files: [ru_oscar_cleaned_dev.txt]
+    hungarian:
+        directory: data/uralic/hungarian
+        files: [hu_oscar_cleaned_dev.txt]
+    finnish:
+        directory: data/uralic/finnish
+        files: [fi_oscar_cleaned_dev.txt]
+    estonian:
+        directory: data/uralic/estonian
+        files: [et_oscar_cleaned_dev.txt]
+    erzya:
+        directory: data/uralic/erzya
+        files: [myv_combined_cleaned_dev.txt]
+    karelian:
+        directory: data/uralic/karelian
+        files: [krl_combined_cleaned_dev.txt]
+    komi:
+        directory: data/uralic/komi
+        files: [koi_combined_cleaned_dev.txt]
+    livonian:
+        directory: data/uralic/livonian
+        files: [liv_combined_cleaned_dev.txt]
+    mari:
+        directory: data/uralic/mari
+        files: [mhr_combined_cleaned_dev.txt]
+    moksha:
+        directory: data/uralic/moksha
+        files: [mdf_combined_cleaned_dev.txt]
+    sami:
+        directory: data/uralic/sami
+        files: [sami_combined_cleaned_dev.txt]
+    udmurt:
+        directory: data/uralic/udmurt
+        files: [udm_combined_cleaned_dev.txt]
+    veps:
+        directory: data/uralic/veps
+        files: [vep_combined_cleaned_dev.txt]
+
+    
+    
+    
+
