@@ -35,6 +35,8 @@ if getattr(args, 'new_vocab_file', False):
     model.set_input_embeddings(new_embeddings)
     model.tie_weights()
     model.config.vocab_size = new_vocab_size
+elif getattr(args, 'vocab_file', False):
+    tokenizer = XLMRobertaTokenizer(vocab_file=args.vocab_file)
 else:
     tokenizer = AutoTokenizer.from_pretrained(args.hf_model)
 
