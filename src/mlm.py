@@ -76,6 +76,7 @@ training_args = TrainingArguments(
     num_train_epochs=args.training_epochs,
     learning_rate=float(args.learning_rate),
     per_device_train_batch_size=args.train_batch_size,
+    logging_steps=args.logging_steps,
     evaluation_strategy=args.eval_strategy,
     per_device_eval_batch_size=args.eval_batch_size,
     eval_steps=args.eval_steps,
