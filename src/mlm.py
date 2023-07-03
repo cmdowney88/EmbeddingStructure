@@ -23,20 +23,39 @@ with open(args.config, 'r') as config_file:
 # load pretrained model and tokenizer
 model = AutoModelForMaskedLM.from_pretrained(args.hf_model)
 
-# If using a new vocabulary, load in the vocab model, replace the embedding
-# layer of the model, tie the new weights to the output, and reset vocab size.
-# Otherwise simply load default tokenizer
+# if using a new vocabulary, load in the vocab model, replace the embedding
+# layer of the model, tie the new weights to the output, and reset vocab size
 if getattr(args, 'new_vocab_file', False):
-    tokenizer = XLMRobertaTokenizer(vocab_file=args.new_vocab_file)
-    new_vocab_size = tokenizer.vocab_size
+    # Get the vocab and embeddings from base XLM-R model
+    old_tokenizer = AutoTokenizer.from_pretrained(args.hf_model)
+    old_vocab = old_tokenizer.get_vocab()
+    old_embeddings = model.get_input_embeddings().weight
+
+    # read in the new tokenizer, initialize new embeddings
+    new_tokenizer = XLMRobertaTokenizer(vocab_file=args.new_vocab_file)
+    new_vocab = new_tokenizer.get_vocab()
+    new_vocab_size = new_tokenizer.vocab_size
     new_embeddings = torch.nn.Embedding(
         new_vocab_size, model.config.hidden_size
     )
+    
+    if getattr(args, 'new_embedding_path', False):
+        raise NotImplementedError()
+    else:
+        # set the embeddings for special tokens to be identical to XLM-R
+        for special_token in ['[CLS]', '[PAD]', '[SEP]', '[UNK]', '[MASK]']:
+            old_token_index = old_vocab[special_token]
+            new_token_index = new_vocab[special_token]
+            new_embeddings.weight[new_token_index] = old_embeddings[old_token_index]
+
+    # set the model's new embeddings, then tie weights to output layer
     model.set_input_embeddings(new_embeddings)
     model.tie_weights()
     model.config.vocab_size = new_vocab_size
+# if the tokenizer/vocab path is different from the model path, load that vocab
 elif getattr(args, 'vocab_file', False):
     tokenizer = XLMRobertaTokenizer(vocab_file=args.vocab_file)
+# load the default tokenizer for the model path
 else:
     tokenizer = AutoTokenizer.from_pretrained(args.hf_model)
 
