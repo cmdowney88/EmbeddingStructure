@@ -36,13 +36,16 @@ if getattr(args, 'new_vocab_file', False):
     new_tokenizer = XLMRobertaTokenizer(vocab_file=args.new_vocab_file)
     new_vocab = new_tokenizer.get_vocab()
     new_vocab_size = new_tokenizer.vocab_size
-    new_embeddings = torch.nn.Embedding(
-        new_vocab_size, model.config.hidden_size
-    )
     
     if getattr(args, 'new_embedding_path', False):
-        raise NotImplementedError()
+        # hard-coding the pad token for now
+        new_padding_index = new_vocab['<pad>']
+        new_embedding_weights = torch.load(args.new_embedding_path)
+        new_embeddings = torch.nn.Embedding.from_pretrained(new_embedding_weights, padding_idx=1)
     else:
+        new_embeddings = torch.nn.Embedding(
+            new_vocab_size, model.config.hidden_size
+        )
         # set the embeddings for special tokens to be identical to XLM-R
         for special_token in _xlmr_special_tokens:
             old_token_index = old_vocab[special_token]
