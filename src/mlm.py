@@ -9,6 +9,7 @@ from transformers import (
 )
 
 from data import ShardedTextDataset
+from utils import _xlmr_special_tokens
 
 # read training configurations from YAML file
 parser = argparse.ArgumentParser(
@@ -43,7 +44,7 @@ if getattr(args, 'new_vocab_file', False):
         raise NotImplementedError()
     else:
         # set the embeddings for special tokens to be identical to XLM-R
-        for special_token in ['[CLS]', '[PAD]', '[SEP]', '[UNK]', '[MASK]']:
+        for special_token in _xlmr_special_tokens:
             old_token_index = old_vocab[special_token]
             new_token_index = new_vocab[special_token]
             new_embeddings.weight[new_token_index] = old_embeddings[old_token_index]
