@@ -1,13 +1,13 @@
 # Sentencepiece vocabulary parameters
 tokenizer_model: unigram
 vocab_size: 32768
-train_dataset_path: data/uralic_vocab_train_alpha02_5mil.txt
+train_dataset_path: data/multilingual/uralic_vocab_train_alpha02_5mil.txt
 output_path: tokenizers/uralic_spm_32k
 
 # Paths and alpha for sampling vocab training set
 alpha: 0.2
 output_length: 5000000
-combined_data_output: data/uralic_vocab_train_alpha02_5mil.txt
+combined_data_output: data/multilingual/uralic_vocab_train_alpha02_5mil.txt
 data_files:
     russian:
         directory: data/indo-european/russian/ru_oscar_cleaned
