@@ -135,5 +135,8 @@ trainer = Trainer(
 # start training
 trainer.train()
 
+best_checkpoint_path = trainer.state.best_model_checkpoint
+print(f"Best checkpoint: {best_checkpoint_path}")
+
 # evaluate model
 trainer.evaluate()
