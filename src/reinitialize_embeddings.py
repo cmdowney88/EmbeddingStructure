@@ -53,16 +53,22 @@ def top_script(token, ord2script):
     return max(script_counts, key=lambda x: script_counts[x])
 
 
-def get_script_to_ids(vocab: dict[str, int], ord_to_script: dict[int, str]) -> dict[str, list[int]]:
+def get_script_to_ids(vocab: dict[str, int], ord_to_script: dict[int, str], word_position: bool) -> dict[str, list[int]]:
+    whitespace = '▁'
     # get script for each token in XLM-R's vocab
     script_to_ids = defaultdict(list)
     for token, index in vocab.items():
         if token in _xlmr_special_tokens:
             script_to_ids['xlmr_special'].append(index)
         # leave out the preceding whitespace when identifying token script
-        token_text = token[1:] if token[0] == '▁' and len(token) > 1 else token
+        token_text = token[1:] if token[0] == whitespace and len(token) > 1 else token
         # identify top script for the token based on characters and Unicode mapping
         script = top_script(token_text, ord_to_script)
+        if word_position == True:
+            if token[0] == whitespace:
+                script += '_initial'
+            else:
+                script += '_medial'
         script_to_ids[script].append(index)
     return script_to_ids
 
@@ -91,13 +97,14 @@ def initialize_by_category_means(
 
 
 def reinitialize_by_script(
-    old_vocab, old_embeddings, new_vocab, new_embeddings, unicode_table_path
+    old_vocab, old_embeddings, new_vocab, new_embeddings, unicode_table_path, 
+    word_position=True
 ):
     # get dictionary to map Unicode decimal to script
     ord_to_script = get_ord2script(unicode_table_path)
 
-    old_script_to_ids = get_script_to_ids(old_vocab, ord_to_script)
-    new_script_to_ids = get_script_to_ids(new_vocab, ord_to_script)
+    old_script_to_ids = get_script_to_ids(old_vocab, ord_to_script, word_position)
+    new_script_to_ids = get_script_to_ids(new_vocab, ord_to_script, word_position)
 
     all_old_scripts = list(old_script_to_ids.keys())
 
@@ -140,6 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--reinit_by_script', action='store_true')
     parser.add_argument('--unicode_block_table', type=str, default="tools/unicode_scripts_for_embeddings_exploration.txt")
     parser.add_argument('--reinit_by_identity', action='store_true')
+    parser.add_argument('--reinit_by_position', action='store_true') # note: only relevant when --reinit_by_script is also used
     args = parser.parse_args()
 
     # load pretrained model and tokenizer
@@ -170,7 +178,7 @@ if __name__ == '__main__':
 
     if args.reinit_by_script:
         new_embeddings = reinitialize_by_script(
-            old_vocab, old_embeddings, new_vocab, new_embeddings, args.unicode_block_table
+            old_vocab, old_embeddings, new_vocab, new_embeddings, args.unicode_block_table, word_position=args.reinit_by_position
         )
 
     if args.reinit_by_identity:
