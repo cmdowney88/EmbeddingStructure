@@ -48,7 +48,13 @@ def load_hf_model(model_type, model_name, task='ppl', random_weights=False, toke
         cache_dir=None,
     )
 
-    if tokenizer_path:
+    if tokenizer_path in ['xlm-roberta-base', 'xlm-roberta-large']:
+        tokenizer = tokenizer_class.from_pretrained(
+            tokenizer_path,
+            do_lower_case=False,
+            cache_dir=None,
+        )
+    elif tokenizer_path:
         tokenizer = XLMRobertaTokenizerFast(vocab_file=tokenizer_path)
     else:
         tokenizer = tokenizer_class.from_pretrained(
