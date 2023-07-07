@@ -3,9 +3,9 @@ models/
 data/
 output/
 tokenizers/
-opus/
 OpusFilter/
 *~
+*.cmd
 .DS_Store
 
 # Byte-compiled / optimized / DLL files
