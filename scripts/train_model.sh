@@ -1,5 +1,8 @@
 #!/bin/sh
+VENVNAME=$1
+DEVICES=$2
+CONFIG=$3
 
-source ~/miniconda3/bin/activate txlm
+source ~/miniconda3/bin/activate $VENVNAME
 
-python -u src/mlm.py --config $1
+CUDA_VISIBLE_DEVICES=$DEVICES python -u src/mlm.py --config $1
