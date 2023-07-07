@@ -540,6 +540,10 @@ if __name__ == "__main__":
     for lang in args.langs:
         assert lang in _lang_choices[args.task]
 
+    print(f"Pytorch version: {torch.__version__}")
+    print(f"Pytorch CUDA version: {torch.version.cuda}")
+    print(f"GPUs available: {torch.cuda.is_available()}")
+
     # set random seeds
     torch.manual_seed(args.random_seed)
     os.environ['PYTHONHASHSEED'] = str(args.random_seed)

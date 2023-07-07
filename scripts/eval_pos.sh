@@ -1,6 +1,8 @@
 #!/bin/sh
-source ~/miniconda3/bin/activate $1
+VENVNAME=$1
+DEVICES=$2
+CONFIG=$3
 
-CONFIG=$2
+source ~/miniconda3/bin/activate $VENVNAME
 
-python -u src/eval_finetune.py --config $CONFIG
+CUDA_VISIBLE_DEVICES=$DEVICES python -u src/eval_finetune.py --config $CONFIG
