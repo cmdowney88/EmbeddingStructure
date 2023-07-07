@@ -1,5 +1,6 @@
 datasets==2.11.*
-transformers[torch]>=4.20.0
+numpy==1.24.*
 PyYAML==6.0
+transformers[torch]>=4.20.0
 tokenizers==0.13.*
 sentencepiece
