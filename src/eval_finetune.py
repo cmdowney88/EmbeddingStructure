@@ -376,7 +376,6 @@ def pos(
         # load criterion and optimizer
         tagger_lr = 0.000005
         tagger_bsz = args.batch_size
-        patience = 2
 
         criterion = torch.nn.CrossEntropyLoss(reduction='mean')
         optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
@@ -392,7 +391,7 @@ def pos(
             bsz=tagger_bsz,
             epochs=max_epochs,
             max_train_examples=max_train_examples,
-            patience=patience,
+            patience=args.patience,
             best_ckpt_path=ckpt_path
         )
 
