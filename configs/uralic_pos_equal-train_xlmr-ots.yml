@@ -17,3 +17,5 @@ random_seed: 1
 epochs: 64
 batch_size: 72
 max_train_examples: 896
+# checkpoints every two epochs, so patience epochs is this parameter x2
+patience: 4

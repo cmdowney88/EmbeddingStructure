@@ -340,6 +340,7 @@ def pos(
     # If not doing zero-shot transfer, pre-process the train, dev, and test sets for the language
     # in question. Also get and log the majority label baselines
     else:
+        print("########")
         print(f"Beginning POS evaluation for {lang}")
         # load UD train and eval data for probing on given langauge
         ud_splits = load_ud_splits(data_path, lang, task='pos')
@@ -376,7 +377,6 @@ def pos(
         # load criterion and optimizer
         tagger_lr = 0.000005
         tagger_bsz = args.batch_size
-        patience = 2
 
         criterion = torch.nn.CrossEntropyLoss(reduction='mean')
         optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
@@ -392,7 +392,7 @@ def pos(
             bsz=tagger_bsz,
             epochs=max_epochs,
             max_train_examples=max_train_examples,
-            patience=patience,
+            patience=args.patience,
             best_ckpt_path=ckpt_path
         )
 
@@ -411,11 +411,13 @@ def pos(
                 acc = acc * 100
                 scores[lg].append(acc)
                 print(f"{lg} accuracy: {round(acc, 2)}")
+            print("----")
         else:
             acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz)
             acc = acc * 100
             scores.append(acc)
             print(f"accuracy: {round(acc, 2)}")
+            print("----")
 
         # reinitalize the model for each trial if using randomly initialized encoder
         if args.random_weights:
@@ -539,6 +541,10 @@ if __name__ == "__main__":
     # ensure that given lang matches given task
     for lang in args.langs:
         assert lang in _lang_choices[args.task]
+
+    print(f"Pytorch version: {torch.__version__}")
+    print(f"Pytorch CUDA version: {torch.version.cuda}")
+    print(f"GPUs available: {torch.cuda.is_available()}")
 
     # set random seeds
     torch.manual_seed(args.random_seed)
