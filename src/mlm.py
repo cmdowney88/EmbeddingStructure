@@ -34,6 +34,7 @@ if getattr(args, 'new_vocab_file', False):
 
     # read in the new tokenizer, initialize new embeddings
     new_tokenizer = XLMRobertaTokenizer(vocab_file=args.new_vocab_file)
+    tokenizer = new_tokenizer
     new_vocab = new_tokenizer.get_vocab()
     new_vocab_size = new_tokenizer.vocab_size
     
@@ -42,6 +43,7 @@ if getattr(args, 'new_vocab_file', False):
         new_padding_index = new_vocab['<pad>']
         new_embedding_weights = torch.load(args.new_embedding_path)
         new_embeddings = torch.nn.Embedding.from_pretrained(new_embedding_weights, padding_idx=1)
+        print("Loaded new embeddings from path")
     else:
         new_embeddings = torch.nn.Embedding(
             new_vocab_size, model.config.hidden_size
@@ -51,6 +53,7 @@ if getattr(args, 'new_vocab_file', False):
             old_token_index = old_vocab[special_token]
             new_token_index = new_vocab[special_token]
             new_embeddings.weight[new_token_index] = old_embeddings[old_token_index]
+        print("Initialized new embeddings randomly")
 
     # set the model's new embeddings, then tie weights to output layer
     model.set_input_embeddings(new_embeddings)
@@ -90,6 +93,8 @@ val_dataset = LineByLineTextDataset(
     file_path=args.val_dataset_path,
     block_size=args.max_seq_len
 )
+
+args.logging_steps = getattr(args, 'logging_steps', 500)
 
 # initialize trainer class with training configs
 training_args = TrainingArguments(
