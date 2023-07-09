@@ -149,6 +149,7 @@ def train_model(
     optimizer,
     pad_idx,
     bsz=1,
+    gradient_accumulation=1,
     epochs=1,
     max_train_examples=math.inf,
     eval_every=2,
@@ -170,6 +171,7 @@ def train_model(
     for epoch_id in tqdm(range(0, epochs), desc='training loop', total=epochs, unit='epoch'):
         random.shuffle(data)
         train_loss = 0.
+        accumulation_counter = 0
 
         # TODO: make this and eval work with new data format (and add feature
         # handling to forward()) go over training data
@@ -188,8 +190,11 @@ def train_model(
 
             loss = criterion(output, labels)
             train_loss += loss.item()
-            loss.backward()
-            optimizer.step()
+            accumulation_counter += 1
+            if accumulation_counter >= gradient_accumulation:
+                loss.backward()
+                optimizer.step()
+                accumulation_counter = 0
 
         if ((epoch_id + 1) % eval_every) == 0:
             valid_acc = evaluate_model(model, valid_data, pad_idx, bsz=bsz)
@@ -377,6 +382,7 @@ def pos(
         # load criterion and optimizer
         tagger_lr = 0.000005
         tagger_bsz = args.batch_size
+        gradient_accumulation = getattr(args, 'gradient_accumulation', 1)
 
         criterion = torch.nn.CrossEntropyLoss(reduction='mean')
         optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
@@ -390,6 +396,7 @@ def pos(
             optimizer,
             tokenizer.pad_token_id,
             bsz=tagger_bsz,
+            gradient_accumulation=gradient_accumulation,
             epochs=max_epochs,
             max_train_examples=max_train_examples,
             patience=args.patience,

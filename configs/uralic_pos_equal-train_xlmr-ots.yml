@@ -2,7 +2,7 @@
 task: pos
 zero_shot_transfer: False
 transfer_source: None
-langs: ['myv', 'sme', 'et', 'fi', 'hu', 'no', 'ru']
+langs: ['myv', 'sme', 'et', 'fi', 'hu', 'ru']
 dataset_path: data/ud-uralic
 # whether to start with a randomly-initialized model
 random_weights: False
