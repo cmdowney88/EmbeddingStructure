@@ -1,5 +1,7 @@
 import argparse
 import copy
+import os
+import random
 from collections import defaultdict
 
 import torch
@@ -148,7 +150,12 @@ if __name__ == '__main__':
     parser.add_argument('--unicode_block_table', type=str, default="tools/unicode_scripts_for_embeddings_exploration.txt")
     parser.add_argument('--reinit_by_identity', action='store_true')
     parser.add_argument('--reinit_by_position', action='store_true') # note: only relevant when --reinit_by_script is also used
+    parser.add_argument('--random_seed', type=int, default=1)
     args = parser.parse_args()
+
+    random.seed(args.random_seed)
+    os.environ['PYTHONHASHSEED'] = str(args.random_seed)
+    torch.manual_seed(args.random_seed)
 
     # load pretrained model and tokenizer
     model = AutoModelForMaskedLM.from_pretrained(args.old_model_path)
