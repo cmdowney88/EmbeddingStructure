@@ -2,14 +2,14 @@
 task: pos
 zero_shot_transfer: False
 transfer_source: None
-langs: ['myv', 'sme', 'et', 'fi', 'hu', 'no', 'ru']
+langs: ['myv', 'sme', 'et', 'fi', 'hu', 'ru']
 dataset_path: data/ud-uralic
 # whether to start with a randomly-initialized model
 random_weights: False
 
 # model options
 model_class: xlmr
-model_name: models/uralic/cpt-full/checkpoint-80000
+model_name: models/uralic/cpt-full/checkpoint-94000
 tokenizer_path: xlm-roberta-base
 checkpoint_path: ./models/uralic/pos/equal_train/xlmr-cpt
 
