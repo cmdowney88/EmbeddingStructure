@@ -161,6 +161,7 @@ def train_model(
 
     max_valid_acc = 0
     patience_step = 0
+    accumulation_counter = 0
 
     total_examples = min(len(data), max_train_examples)
     if total_examples < len(data):
@@ -170,8 +171,6 @@ def train_model(
     # training epochs
     for epoch_id in tqdm(range(0, epochs), desc='training loop', total=epochs, unit='epoch'):
         random.shuffle(data)
-        train_loss = 0.
-        accumulation_counter = 0
 
         # TODO: make this and eval work with new data format (and add feature
         # handling to forward()) go over training data
@@ -185,15 +184,13 @@ def train_model(
             input_ids = input_ids.to('cuda:0')
             labels = labels.to('cuda:0')
 
-            optimizer.zero_grad()
             output = model.forward(input_ids, alignments)
-
             loss = criterion(output, labels)
-            train_loss += loss.item()
+            loss.backward()
             accumulation_counter += 1
             if accumulation_counter >= gradient_accumulation:
-                loss.backward()
                 optimizer.step()
+                optimizer.zero_grad()
                 accumulation_counter = 0
 
         if ((epoch_id + 1) % eval_every) == 0:
