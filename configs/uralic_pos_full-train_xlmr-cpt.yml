@@ -9,14 +9,15 @@ random_weights: False
 
 # model options
 model_class: xlmr
-model_name: xlm-roberta-base
-checkpoint_path: ./models/uralic/pos/equal_train/xlmr_ots
+model_name: models/uralic/cpt-full/checkpoint-94000
+tokenizer_path: xlm-roberta-base
+checkpoint_path: ./models/uralic/pos/full_train/xlmr_cpt
 
 # training options
 random_seed: 1
 epochs: 64
 batch_size: 36
 gradient_accumulation: 2
-max_train_examples: 896
+max_train_examples: null
 # checkpoints every two epochs, so patience epochs is this parameter x2
 patience: 4
