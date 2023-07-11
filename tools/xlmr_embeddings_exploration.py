@@ -4,6 +4,7 @@ from matplotlib.patches import Ellipse
 from sklearn.decomposition import PCA
 from transformers import AutoTokenizer, AutoModelForMaskedLM, XLMRobertaTokenizer
 
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
@@ -63,7 +64,7 @@ def top_script(token, ord2script, preferred_scripts=None):
     
     return max(script_counts, key=lambda x: (script_counts[x], x in preferred_scripts))
 
-def get_script2ids(id2token, ord2script):
+def get_script2ids(id2token, ord2script, preferred_scripts):
     """Return dict with scripts as keys and lists of token IDs as values. 
     id2token (dict) IDs as keys and tokens as values. ord2script (dict) has 
     Unicode decimals as keys and scripts of corresponding characters as values."""
@@ -71,7 +72,7 @@ def get_script2ids(id2token, ord2script):
     for i in range(len(id2token)):
         token = id2token[i]
         token = token[1:] if token[0] == '▁' and len(token) > 1 else token
-        script = top_script(token, ord2script, preferred_scripts={'Latin', 'Cyrillic'})
+        script = top_script(token, ord2script, preferred_scripts=preferred_scripts)
         script2ids[script].append(i)
     return script2ids
 
@@ -97,7 +98,8 @@ def get_script_stds_means(index2script, script2ids, embeddings):
         script_means.append(std_and_mean[1].detach().numpy())
     return np.array(script_stds), np.array(script_means)
 
-def plot_pca(coords, index2label, label_offset=0.01, fontsize='x-small', mean_all=None):
+def plot_pca(coords, index2label, label_offset=0.01, fontsize='x-small', mean_all=None,
+             axis_limits=None, title=None):
     """Plot principal components. coords (numpy array of floats) gives x-coordinates
     in column 0 and y-coordinates in column 1. index2label (dict) has indices
     of coordinates as keys and name of corresponding label for plot as values."""
@@ -111,6 +113,13 @@ def plot_pca(coords, index2label, label_offset=0.01, fontsize='x-small', mean_al
         
     if mean_all is not None:
         plt.text(mean_all[0,0], mean_all[0,1], 'X', color='red', fontweight='extra bold')
+        
+    if axis_limits is not None:
+        plt.xlim(axis_limits[0])
+        plt.ylim(axis_limits[1])
+        
+    if title is not None:
+        plt.title(title)
         
     plt.show()
     
@@ -169,7 +178,7 @@ def confidence_ellipse(x, y, ax, n_std=3.0, facecolor='none', **kwargs):
     return ax.add_patch(ellipse)
     
 def plot_pca_ellipses(pc_all, scripts, script2ids, colormap='tab10', means=None,
-                      mean_color='red'):
+                      mean_color='red', axis_limits=None, title=None):
     """Plot confidence ellipses for principal components of embeddings for each
     script in scripts (list). pc_all is a 2D array of principal components of
     embeddings. script2ids (dict) has scripts from the scripts list as keys and 
@@ -190,15 +199,47 @@ def plot_pca_ellipses(pc_all, scripts, script2ids, colormap='tab10', means=None,
             if means != None:
                 ax.scatter(means[i][0], means[i][1], color=mean_color)
     plt.legend(loc='upper right')
+    
+    if axis_limits is not None:
+        plt.xlim(axis_limits[0])
+        plt.ylim(axis_limits[1])
+        
+    if title is not None:
+        plt.title(title)
+    
     plt.show()
     
-def plot_word_position_scatters(id2token, pc_all, index2script, script2ids):
+def plot_word_position_scatters(id2token, pc_all, index2script, script2ids, 
+                                axis_limits=None, title=None):
     """Make scatter plots of embedding principal components with hue determined
     by whether tokens are word-initial or word-medial. One scatter plot shows
     results for all scripts. There is also a separate scatter plot for each script."""
     # plot all scripts
     word_position = np.array(['Initial' if x[0] == '▁' else 'Medial' for x in id2token])
-    sns.scatterplot(x=pc_all[:,0], y=pc_all[:,1], hue=word_position).set_title('All scripts')
+    sns.scatterplot(x=pc_all[:,0], y=pc_all[:,1], hue=word_position, s=2,
+                    hue_order=['Medial', 'Initial'])
+    if axis_limits is not None:
+        plt.xlim(axis_limits[0])
+        plt.ylim(axis_limits[1])
+    if title is None:
+        plt.title('All scripts')
+    else:
+        plt.title(f'{title}, all scripts')
+    plt.show()
+    
+    # plot Common, Cyrillic and Latin
+    script_ids = script2ids['Common'] + script2ids['Cyrillic'] + script2ids['Latin']
+    pc_script = pc_all[script_ids]
+    script_underscores = word_position[script_ids]
+    sns.scatterplot(x=pc_script[:,0], y=pc_script[:,1], hue=script_underscores,
+                    hue_order=['Medial', 'Initial'], s=2)
+    if axis_limits is not None:
+        plt.xlim(axis_limits[0])
+        plt.ylim(axis_limits[1])
+    if title is None:
+        plt.title('Common/Cyrillic/Latin')
+    else:
+        plt.title(f'{title}, Common/Cyrillic/Latin')
     plt.show()
     
     # make plots for each script
@@ -206,18 +247,28 @@ def plot_word_position_scatters(id2token, pc_all, index2script, script2ids):
         script_ids = script2ids[script]
         pc_script = pc_all[script_ids]
         script_underscores = word_position[script_ids]
-        sns.scatterplot(x=pc_script[:,0], y=pc_script[:,1], hue=script_underscores).set_title(script)
+        sns.scatterplot(x=pc_script[:,0], y=pc_script[:,1], hue=script_underscores,
+                        hue_order=['Medial', 'Initial'], s=2)
+        if axis_limits is not None:
+            plt.xlim(axis_limits[0])
+            plt.ylim(axis_limits[1])
+        if title is None:
+            plt.title(script)
+        else:
+            plt.title(f'{title}, {script}')
         plt.show()
     
-def plot_base_embeddings(embeddings, ord2script, pca):
+def plot_base_embeddings(embeddings, tokenizer_path, ord2script, pca, axis_limits,
+                         preferred_scripts):
     """Plot principal components of XLM-R base embeddings."""
+    base_title = 'Base'
     
     # get id2token for base embeddings
-    tokenizer = AutoTokenizer.from_pretrained('xlm-roberta-base')
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     id2token = tokenizer.convert_ids_to_tokens([x for x in range(len(embeddings))])
     
     # get script for each token in embeddings
-    script2ids = get_script2ids(id2token, ord2script)
+    script2ids = get_script2ids(id2token, ord2script, preferred_scripts)
     display_script_tokens(script2ids, id2token, 'base')
     
     # get mean and standard deviation of all embeddings
@@ -236,14 +287,16 @@ def plot_base_embeddings(embeddings, ord2script, pca):
     print(f'Principal components of mean of base embeddings: {mean_all}')
     
     # plot mean principal components
-    plot_pca(reduced, index2script, label_offset=.025)
+    plot_pca(reduced, index2script, label_offset=.025, axis_limits=axis_limits, 
+             title=base_title)
     
     # plot mean principal components for cluster of scripts (exclude Cyrillic, Braille, Common, Latin)
     skip_scripts = [x for x in ['Cyrillic', 'Braille', 'Common', 'Latin'] if x in index2script]
     skip_indices = [index2script.index(x) for x in skip_scripts]
     not_all_means_pc = np.delete(reduced, skip_indices, axis=0)
     not_all_scripts = [x for x in index2script if x not in skip_scripts]
-    plot_pca(not_all_means_pc, not_all_scripts, label_offset=.01)
+    plot_pca(not_all_means_pc, not_all_scripts, label_offset=.01, 
+             axis_limits=axis_limits, title=base_title)
     
     # plot mean principal components for most frequent scripts
     most_common_scripts = [x for x in index2script if len(script2ids[x]) > 4000]
@@ -251,14 +304,16 @@ def plot_base_embeddings(embeddings, ord2script, pca):
     frequent_script_indices = [index2script.index(x) for x in frequent_scripts]
     frequent_script_means_pc = reduced[frequent_script_indices]
     plot_pca(frequent_script_means_pc, frequent_scripts, label_offset=.025, 
-             fontsize='small')
+             fontsize='small', axis_limits=axis_limits, title=base_title)
     
     # plot confidence ellipses for most frequent scripts
     pc_all = pca.transform(embeddings.detach().numpy())
-    plot_pca_ellipses(pc_all, frequent_scripts, script2ids, colormap='tab20')
+    plot_pca_ellipses(pc_all, frequent_scripts, script2ids, colormap='tab20', 
+                      axis_limits=axis_limits, title=base_title)
     
     # plot confidence ellipses for expected Uralic scripts
-    plot_pca_ellipses(pc_all, ['Common', 'Latin', 'Cyrillic'], script2ids)
+    plot_pca_ellipses(pc_all, ['Common', 'Latin', 'Cyrillic'], script2ids,
+                      axis_limits=axis_limits, title=base_title)
     
     # plot confidence ellipses for scripts used for same language or groups of closely-related languages
     dravidian_scripts = ['Kannada', 'Malayalam', 'Tamil', 'Telugu']
@@ -270,26 +325,24 @@ def plot_base_embeddings(embeddings, ord2script, pca):
     chinese_scripts = ['Bopomofo', 'Han']
     for scripts in (dravidian_scripts, indoaryan_scripts, semitic_scripts, 
                     taikaidai_scripts, japanese_scripts, chinese_scripts):
-        plot_pca_ellipses(pc_all, scripts, script2ids)
+        plot_pca_ellipses(pc_all, scripts, script2ids, axis_limits=axis_limits,
+                          title=base_title)
     
     # plot embedding principal components with hue determined by presence/absence
     # of a leading underscore
-    plot_word_position_scatters(id2token, pc_all, index2script, script2ids)
+    plot_word_position_scatters(id2token, pc_all, index2script, script2ids, 
+                                axis_limits=axis_limits, title=base_title)
     
-def plot_new_embeddings(model_path, tokenizer_path, pca, embeddings_name): 
+def plot_new_embeddings(embeddings, tokenizer_path, pca, embeddings_name, 
+                        axis_limits, preferred_scripts): 
     """Plot principal components of embeddings using model at model_path and 
     tokenizer at tokenizer_path."""
-    
-    # get embeddings
-    model = AutoModelForMaskedLM.from_pretrained(model_path) 
-    embeddings = model.get_input_embeddings().weight
-    
     # get id2token for embeddings
     tokenizer = XLMRobertaTokenizer(vocab_file=tokenizer_path)
     id2token = tokenizer.convert_ids_to_tokens([x for x in range(len(embeddings))])
     
     # get script for each token in embeddings
-    script2ids = get_script2ids(id2token, ord2script)
+    script2ids = get_script2ids(id2token, ord2script, preferred_scripts)
     display_script_tokens(script2ids, id2token, embeddings_name)
     
     # get mean and standard deviation of all embeddings
@@ -298,7 +351,8 @@ def plot_new_embeddings(model_path, tokenizer_path, pca, embeddings_name):
     
     # get mean and standard deviation for each script
     index2script = [x for x in script2ids.keys() if len(script2ids[x]) > 0]
-    script_stds, script_means = get_script_stds_means(index2script, script2ids, embeddings)
+    script_stds, script_means = get_script_stds_means(index2script, script2ids, 
+                                                      embeddings)
     
     # principal components for script mean embeddings
     reduced = pca.transform(script_means)
@@ -308,32 +362,68 @@ def plot_new_embeddings(model_path, tokenizer_path, pca, embeddings_name):
     print(f'Principal components of mean of {embeddings_name} embeddings: {mean_all}')
     
     # plot mean principal components
-    plot_pca(reduced, index2script, label_offset=.025)
+    plot_pca(reduced, index2script, label_offset=.025, axis_limits=axis_limits,
+             title=embeddings_name)
     
     # plot standard deviation ellipses for scripts with more than 2 tokens
     pc_all = pca.transform(embeddings.detach().numpy())
     ellipse_scripts = [x for x in script2ids if len(script2ids[x]) > 2]
-    plot_pca_ellipses(pc_all, ellipse_scripts, script2ids)
+    plot_pca_ellipses(pc_all, ellipse_scripts, script2ids, 
+                      axis_limits=axis_limits, title=embeddings_name)
     
     # plot embedding principal components with hue determined by presence/absence
     # of a leading underscore
-    plot_word_position_scatters(id2token, pc_all, index2script, script2ids)
+    plot_word_position_scatters(id2token, pc_all, index2script, script2ids, 
+                                axis_limits=axis_limits, title=embeddings_name)
     
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description="Visualize principal components of embeddings for an XLM-R based model"
+    )
+    parser.add_argument('--old_model_path', type=str, default='xlm-roberta-base')
+    parser.add_argument('--old_tokenizer_path', type=str, default=None)
+    parser.add_argument('--plot_old_embeddings', action='store_true')
+    parser.add_argument('--new_model_file', type=str, default=None)
+    parser.add_argument('--new_embeddings_file', type=str, default=None)
+    parser.add_argument('--new_vocab_file', type=str, default=None)
+    parser.add_argument('--unicode_block_table', type=str, default="tools/unicode_scripts_for_embeddings_exploration.txt")
+    parser.add_argument('--new_embeddings_name', type=str, default='new')
+    parser.add_argument('--axis_limits', nargs='+', type=float, default=None) # format: x_min x_max y_min y_max
+    parser.add_argument('--preferred_scripts', nargs='+', type=str, default=None)
+    args = parser.parse_args()
+    
     # convert Unicode decimal to character's script
-    ord2script = get_ord2script('unicode_scripts_for_embeddings_exploration.txt')
+    ord2script = get_ord2script(args.unicode_block_table)
+    
+    if args.axis_limits:
+        args.axis_limits = [args.axis_limits[:2], args.axis_limits[2:]]
+        
+    if args.preferred_scripts:
+        args.preferred_scripts = set(args.preferred_scripts)
     
     # get base XLM-R embeddings
-    base_model = AutoModelForMaskedLM.from_pretrained('xlm-roberta-base')
+    base_model = AutoModelForMaskedLM.from_pretrained(args.old_model_path)
     base_embeddings = base_model.get_input_embeddings().weight
+    del base_model
     
     # fit PCA to base embeddings
     pca = PCA(n_components=2, random_state=1)
     pca.fit(base_embeddings.detach().numpy())
     
-    plot_base_embeddings(base_embeddings, ord2script, pca)
+    # plot base embeddings
+    if args.plot_old_embeddings:
+        if not args.old_tokenizer_path:
+            args.old_tokenizer_path = args.old_model_path
+        plot_base_embeddings(base_embeddings, args.old_tokenizer_path, ord2script, 
+                             pca, args.axis_limits, args.preferred_scripts)
     
-    uralic_model_path = './models/checkpoint-200000' 
-    uralic_tokenizer_path = './tokenizers/uralic_spm_32k.model'
-    
-    plot_new_embeddings(uralic_model_path, uralic_tokenizer_path, pca, 'Uralic')
+    # plot new embeddings
+    if args.new_vocab_file and (args.new_model_file or args.new_embeddings_file):
+        if args.new_model_file:
+            model = AutoModelForMaskedLM.from_pretrained(args.new_model_file) 
+            embeddings = model.get_input_embeddings().weight
+            del model
+        else:
+            embeddings = torch.load(args.new_embeddings_file)
+        plot_new_embeddings(embeddings, args.new_vocab_file, pca, args.new_embeddings_name, 
+                            args.axis_limits, args.preferred_scripts)
