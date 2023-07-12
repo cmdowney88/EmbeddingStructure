@@ -11,7 +11,7 @@ random_weights: False
 model_class: xlmr
 model_name: models/uralic/cpt-full/checkpoint-94000
 tokenizer_path: xlm-roberta-base
-checkpoint_path: ./models/uralic/pos/equal_train/xlmr-cpt
+checkpoint_path: ./models/uralic/pos/equal_train/xlmr_cpt
 
 # training options
 random_seed: 1
