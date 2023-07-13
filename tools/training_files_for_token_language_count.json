@@ -1,0 +1,15 @@
+{
+     "Erzya"     : "/projects/assigned/txlm/data/uralic/erzya/myv_combined_cleaned_train.txt",
+     "Estonian"  : "/projects/assigned/txlm/data/uralic/estonian/et_oscar_cleaned/et_oscar_cleaned_shard1.txt",
+     "Finnish"   : "/projects/assigned/txlm/data/uralic/finnish/fi_oscar_cleaned/fi_oscar_cleaned_shard1.txt",
+     "Hungarian" : "/projects/assigned/txlm/data/uralic/hungarian/hu_oscar_cleaned/hu_oscar_cleaned_shard1.txt",
+     "Karelian"  : "/projects/assigned/txlm/data/uralic/karelian/krl_combined_cleaned_train.txt",
+     "Komi"      : "/projects/assigned/txlm/data/uralic/komi/koi_combined_cleaned_train.txt",
+     "Livonian"  : "/projects/assigned/txlm/data/uralic/livonian/liv_combined_cleaned_train.txt",
+     "Mari"      : "/projects/assigned/txlm/data/uralic/mari/mhr_combined_cleaned_train.txt",
+     "Moksha"    : "/projects/assigned/txlm/data/uralic/moksha/mdf_combined_cleaned_train.txt",
+     "Sami"      : "/projects/assigned/txlm/data/uralic/sami/sami_combined_cleaned_train.txt",
+     "Udmurt"    : "/projects/assigned/txlm/data/uralic/udmurt/udm_combined_cleaned_train.txt",
+     "Veps"      : "/projects/assigned/txlm/data/uralic/veps/vep_combined_cleaned_train.txt",
+     "Russian"   : "/projects/assigned/txlm/data/indo-european/russian/ru_oscar_cleaned/ru_oscar_cleaned_shard1.txt"
+}
