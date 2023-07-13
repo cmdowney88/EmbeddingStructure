@@ -1,24 +1,49 @@
 import argparse
 import numpy as np
-import random
 import os
+import random
+import sys
 import yaml
 
 import torch
 from transformers import (
-    AutoTokenizer, XLMRobertaTokenizer, AutoModelForMaskedLM,
-    LineByLineTextDataset, DataCollatorForLanguageModeling, Trainer,
+    AutoTokenizer, XLMRobertaTokenizer, AutoModelForMaskedLM, LineByLineTextDataset,
+    DataCollatorForLanguageModeling, Trainer, TrainerCallback, TrainerControl, TrainerState,
     TrainingArguments
 )
 
 from data import ShardedTextDataset
 from utils import _xlmr_special_tokens
 
+
+class UnfreezeCallback(TrainerCallback):
+    """
+    Callback to unfreeze the entire model at a certain point in training. The parameter
+    `unfreeze_step_ratio` controls the point at which to unfreeze (as a ratio of the maximum
+    training steps)
+    """
+    def __init__(self, trainer: Trainer, unfreeze_step_ratio: float):
+        self.trainer = trainer
+        self.unfreeze_step_ratio = unfreeze_step_ratio
+        self.already_unfrozen = False
+
+    def on_step_end(
+        self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs
+    ):
+        reached_unfreeze_step = state.global_step >= int(self.unfreeze_step_ratio * state.max_steps)
+        if reached_unfreeze_step and not self.already_unfrozen:
+            for param in self.trainer.model.parameters():
+                param.requires_grad = True
+            self.already_unfrozen = True
+            print(
+                f"\nAll model parameters unfrozen after global step {state.global_step}",
+                file=sys.stderr
+            )
+
+
 if __name__ == "__main__":
     # read training configurations from YAML file
-    parser = argparse.ArgumentParser(
-        description="Finetune XLM-R model on raw text corpora"
-    )
+    parser = argparse.ArgumentParser(description="Finetune XLM-R model on raw text corpora")
     parser.add_argument('--config', type=str)
     args = parser.parse_args()
     config_dict = vars(args)
@@ -48,23 +73,23 @@ if __name__ == "__main__":
         tokenizer = new_tokenizer
         new_vocab = new_tokenizer.get_vocab()
         new_vocab_size = new_tokenizer.vocab_size
-        
+
         if getattr(args, 'new_embedding_path', False):
             # hard-coding the pad token for now
             new_padding_index = new_vocab['<pad>']
             new_embedding_weights = torch.load(args.new_embedding_path)
-            new_embeddings = torch.nn.Embedding.from_pretrained(new_embedding_weights, padding_idx=1)
-            print("Loaded new embeddings from path")
-        else:
-            new_embeddings = torch.nn.Embedding(
-                new_vocab_size, model.config.hidden_size
+            new_embeddings = torch.nn.Embedding.from_pretrained(
+                new_embedding_weights, padding_idx=1
             )
+            print("Loaded new embeddings from path", file=sys.stderr)
+        else:
+            new_embeddings = torch.nn.Embedding(new_vocab_size, model.config.hidden_size)
             # set the embeddings for special tokens to be identical to XLM-R
             for special_token in _xlmr_special_tokens:
                 old_token_index = old_vocab[special_token]
                 new_token_index = new_vocab[special_token]
                 new_embeddings.weight[new_token_index] = old_embeddings[old_token_index]
-            print("Initialized new embeddings randomly")
+            print("Initialized new embeddings randomly", file=sys.stderr)
 
         # set the model's new embeddings, then tie weights to output layer
         model.set_input_embeddings(new_embeddings)
@@ -93,16 +118,12 @@ if __name__ == "__main__":
         )
     else:
         train_dataset = LineByLineTextDataset(
-            tokenizer=tokenizer,
-            file_path=args.train_dataset_path,
-            block_size=args.max_seq_len
+            tokenizer=tokenizer, file_path=args.train_dataset_path, block_size=args.max_seq_len
         )
 
     # prepare validation data
     val_dataset = LineByLineTextDataset(
-        tokenizer=tokenizer,
-        file_path=args.val_dataset_path,
-        block_size=args.max_seq_len
+        tokenizer=tokenizer, file_path=args.val_dataset_path, block_size=args.max_seq_len
     )
 
     args.logging_steps = getattr(args, 'logging_steps', 500)
@@ -148,11 +169,17 @@ if __name__ == "__main__":
         eval_dataset=val_dataset
     )
 
+    # may want to unfreeze transformer blocks at a point during training; use this custom callback
+    # to do so
+    if getattr(args, 'freeze_main_model', False) and getattr(args, 'unfreeze_step_ratio', None):
+        unfreeze_callback = UnfreezeCallback(trainer, args.unfreeze_step_ratio)
+        trainer.add_callback(unfreeze_callback)
+
     # start training
     trainer.train()
 
     best_checkpoint_path = trainer.state.best_model_checkpoint
-    print(f"Best checkpoint: {best_checkpoint_path}")
+    print(f"Best checkpoint: {best_checkpoint_path}", file=sys.stderr)
 
     # evaluate model
     trainer.evaluate()
