@@ -1,4 +1,7 @@
 import argparse
+import numpy as np
+import random
+import os
 import yaml
 
 import torch
@@ -20,6 +23,13 @@ args = parser.parse_args()
 config_dict = vars(args)
 with open(args.config, 'r') as config_file:
     config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
+
+torch.manual_seed(args.seed)
+torch.cuda.manual_seed(args.seed)
+torch.cuda.manual_seed_all(args.seed)
+np.random.seed(args.seed)
+random.seed(args.seed)
+os.environ['PYTHONHASHSEED'] = str(args.seed)
 
 # load pretrained model and tokenizer
 model = AutoModelForMaskedLM.from_pretrained(args.hf_model)
