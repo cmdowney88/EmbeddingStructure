@@ -16,7 +16,8 @@ class ShardedTextDataset(IterableDataset):
         shuffle_shards: bool = True,
         shuffle_within_shard: bool = True,
         sort_by_length: bool = False,
-        saved_state: dict = None
+        saved_state: dict = None,
+        reset_indices: bool = False
     ) -> IterableDataset:
         """
         A Dataset class for text data that has been split into a number of
@@ -42,10 +43,14 @@ class ShardedTextDataset(IterableDataset):
         if saved_state:
             for key in saved_state:
                 setattr(self, key, saved_state[key])
+            if reset_indices:
+                self.global_index = 0
+                self.index_of_shard = 0
+                self.index_within_shard = 0
             self._load_shard()
         else:
             self.datadir = datadir
-            self.datafiles = os.listdir(datadir)
+            self.datafiles = sorted(os.listdir(datadir))
             self.num_shards = len(self.datafiles)
             self.max_seq_length = max_seq_length
 
@@ -153,9 +158,14 @@ class ShardedTextDataset(IterableDataset):
             yaml.dump(state_dict, fout)
 
     @classmethod
-    def from_saved(cls, save_path, tokenizer):
+    def from_saved(cls, save_path, tokenizer, reset_indices=False):
         with open(save_path, 'r') as fin:
             saved_state = yaml.load(fin, Loader=yaml.Loader)
-        return cls(saved_state['datadir'], tokenizer, saved_state=saved_state)
+        return cls(
+            saved_state['datadir'],
+            tokenizer,
+            saved_state=saved_state,
+            reset_indices=reset_indices
+        )
         
 

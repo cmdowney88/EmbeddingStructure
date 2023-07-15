@@ -194,14 +194,19 @@ if __name__ == "__main__":
         if args.resume_from_checkpoint:
             last_checkpoint_path = args.control_dict['last_checkpoint']
             checkpoint_dataset_path = os.path.join(last_checkpoint_path, "train_dataset_state.yml")
-            train_dataset = ShardedTextDataset.from_saved(checkpoint_dataset_path, tokenizer)
+            train_dataset = ShardedTextDataset.from_saved(
+                checkpoint_dataset_path, tokenizer, reset_indices=True
+            )
             print(
                 f"Loaded training dataset state from {last_checkpoint_path}",
                 file=sys.stderr
             )
         else:
             train_dataset = ShardedTextDataset(
-                args.train_dataset_path, tokenizer, max_seq_length=args.max_seq_len
+                args.train_dataset_path,
+                tokenizer,
+                max_seq_length=args.max_seq_len,
+                shuffle_within_shard=False
             )
     else:
         train_dataset = LineByLineTextDataset(
