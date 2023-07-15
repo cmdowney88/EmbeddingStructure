@@ -154,7 +154,7 @@ def train_model(
     max_train_examples=math.inf,
     eval_every=2,
     patience=0,
-    best_ckpt_path='./model_best.ckpt'
+    model_dir='./eval_checkpoints'
 ):
     model.train()
     model.to('cuda:0')
@@ -205,11 +205,20 @@ def train_model(
             else:
                 max_valid_acc = valid_acc
                 # checkpoint model
-                torch.save(model.state_dict(), best_ckpt_path + "/best_model.pt")
+                best_model_path = os.path.join(model_dir, "best_model.pt")
+                torch.save(model.state_dict(), best_model_path)
                 patience_step = 0
 
+    # output a marker that training is completed, as well as the number of epochs to convergence;
+    # this is so trials need not be repeated if a job is preempted
+    num_epochs_to_convergence = (epoch_id + 1 - (patience_step * eval_every))
+    checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
+    with open(checkpoint_control_path, 'w') as fout:
+        print("training_complete: True", file=fout)
+        print(f"num_epochs_to_convergence: {num_epochs_to_convergence}", file=fout)
+
     # return model, number of training epochs for best ckpt
-    return model, (epoch_id + 1 - (patience_step * eval_every))
+    return model, num_epochs_to_convergence
 
 
 def evaluate_model(model, data, pad_idx, bsz=1):
@@ -373,37 +382,58 @@ def pos(
         np.random.seed(rand_x)
         random.seed(rand_x)
 
+        # look for a control file to determine if a trial has already been done, e.g. by a
+        # submitted job that was pre-empted before completing all trials
+        lang_name = args.transfer_source if do_zero_shot else lang
+        model_dir = os.makedirs(os.path.join(ckpt_path, lang_name, rand_x), exist_ok=True)
+        checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
+        checkpoint_control_exists = os.path.isfile(checkpoint_control_path)
+        if checkpoint_control_exists:
+            with open(checkpoint_control_path, 'r') as fin:
+                control_dict = yaml.load(fin, Loader=yaml.Loader)
+                training_complete = control_dict['training_complete']
+        else:
+            control_dict = None
+            training_complete = False
+
         # create probe model
         tagger = Tagger(model, len(pos_labels))
 
-        # load criterion and optimizer
-        tagger_lr = 0.000005
-        tagger_bsz = args.batch_size
-        gradient_accumulation = getattr(args, 'gradient_accumulation', 1)
+        # only do training if we can't retrieve the existing checkpoint
+        if not training_complete:
+            # load criterion and optimizer
+            tagger_lr = 0.000005
+            tagger_bsz = args.batch_size
+            gradient_accumulation = getattr(args, 'gradient_accumulation', 1)
 
-        criterion = torch.nn.CrossEntropyLoss(reduction='mean')
-        optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
+            criterion = torch.nn.CrossEntropyLoss(reduction='mean')
+            optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
 
-        # train classification model
-        tagger, num_epochs = train_model(
-            tagger,
-            train_data,
-            valid_data,
-            criterion,
-            optimizer,
-            tokenizer.pad_token_id,
-            bsz=tagger_bsz,
-            gradient_accumulation=gradient_accumulation,
-            epochs=max_epochs,
-            max_train_examples=max_train_examples,
-            patience=args.patience,
-            best_ckpt_path=ckpt_path
-        )
-
-        # load best checkpoint for model state
-        tagger.load_state_dict(torch.load(ckpt_path + "/best_model.pt"))
+            # train classification model
+            tagger, num_epochs = train_model(
+                tagger,
+                train_data,
+                valid_data,
+                criterion,
+                optimizer,
+                tokenizer.pad_token_id,
+                bsz=tagger_bsz,
+                gradient_accumulation=gradient_accumulation,
+                epochs=max_epochs,
+                max_train_examples=max_train_examples,
+                patience=args.patience,
+                model_dir=model_dir
+            )
+        else:
+            print(f"random seed {rand_x} previously trained; reading checkpoint")
+            num_epochs = control_dict['num_epochs_to_convergence']
+            pass
 
         epochs.append(num_epochs * 1.0)
+
+        # load best checkpoint for model state
+        best_model_path = os.path.join(model_dir, "best_model.pt")
+        tagger.load_state_dict(torch.load(best_model_path))
 
         print(f"random seed: {rand_x}")
         print(f"num epochs: {num_epochs}")
