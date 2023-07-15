@@ -4,6 +4,7 @@ import os
 import random
 import sys
 import yaml
+from pathlib import Path
 
 import torch
 from transformers import (
@@ -29,11 +30,11 @@ class CheckpointControlCallback(TrainerCallback):
     def on_save(
         self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs
     ):
-        output_dir = self.trainer.output_dir
+        output_dir = self.checkpoint_path
         last_checkpoint_path = os.path.join(output_dir, f"checkpoint-{state.global_step}")
         with open(self.checkpoint_control_path, 'w') as fout:
             print("resume_from_checkpoint: True", file=fout)
-            print(f"last_checkpoint_path: {last_checkpoint_path}", file=fout)
+            print(f"last_checkpoint: {last_checkpoint_path}", file=fout)
 
         train_dataset = self.trainer.train_dataset
         if isinstance(train_dataset, ShardedTextDataset):
@@ -102,24 +103,30 @@ if __name__ == "__main__":
     os.environ['PYTHONHASHSEED'] = str(args.seed)
 
     # establish or read a control file to determine whether to resume from a checkpoint
-    os.makedirs(args.checkpoint_path, exist_ok=True)
-    checkpoint_control_path = os.path.join(args.checkpoint_path, "checkpoint_control.yml")
+    os.makedirs(args.checkpoints_directory, exist_ok=True)
+    checkpoint_control_path = os.path.join(args.checkpoints_directory, "checkpoint_control.yml")
     checkpoint_control_exists = os.path.isfile(checkpoint_control_path)
-    if not checkpoint_control_exists:
-        with open(checkpoint_control_path, 'w') as fout:
-            print("resume_from_checkpoint: True", file=fout)
-        args.resume_from_checkpoint = False
-    else:
-        control_dict = yaml.load(checkpoint_control_path, Loader=yaml.Loader)
+    if checkpoint_control_exists:
+        with open(checkpoint_control_path, 'r') as fin:
+            control_dict = yaml.load(fin, Loader=yaml.Loader)
         args.resume_from_checkpoint = control_dict['resume_from_checkpoint']
         args.control_dict = control_dict
+        last_checkpoint_name = control_dict['last_checkpoint']
+        last_checkpoint_name = Path(last_checkpoint_name).stem
+        
         # resume_from_checkpoint==False is only okay if we're starting a new training
         # run; exit if the folder contains checkpoints not meant to be resumed
         if not args.resume_from_checkpoint:
             raise RuntimeError(
-                f"Not resuming from checkpoints in {args.checkpoint_path};"
+                f"Not resuming from checkpoints in {args.checkpoints_directory};"
                 " control file indicates resuming should be blocked"
             )
+        print(
+           f"Checkpoint control file found; resuming training from {last_checkpoint_name}",
+            file=sys.stderr
+        )
+    else:
+        args.resume_from_checkpoint = False
 
     # load pretrained model and tokenizer
     model = AutoModelForMaskedLM.from_pretrained(args.hf_model)
@@ -145,7 +152,7 @@ if __name__ == "__main__":
             new_embeddings = torch.nn.Embedding.from_pretrained(
                 new_embedding_weights, padding_idx=1
             )
-            print("Loaded new embeddings from path", file=sys.stderr)
+            print(f"Loaded new embeddings from {args.new_embedding_path}", file=sys.stderr)
         else:
             new_embeddings = torch.nn.Embedding(new_vocab_size, model.config.hidden_size)
             # set the embeddings for special tokens to be identical to XLM-R
@@ -179,9 +186,13 @@ if __name__ == "__main__":
     # prepare training data
     if getattr(args, 'sharded_train_dataset', False):
         if args.resume_from_checkpoint:
-            last_checkpoint_path = args.control_dict['last_checkpoint_path']
+            last_checkpoint_path = args.control_dict['last_checkpoint']
             checkpoint_dataset_path = os.path.join(last_checkpoint_path, "train_dataset_state.yml")
             train_dataset = ShardedTextDataset.from_saved(checkpoint_dataset_path, tokenizer)
+            print(
+                f"Loaded training dataset state from {last_checkpoint_path}",
+                file=sys.stderr
+            )
         else:
             train_dataset = ShardedTextDataset(
                 args.train_dataset_path, tokenizer, max_seq_length=args.max_seq_len
@@ -239,7 +250,7 @@ if __name__ == "__main__":
         eval_dataset=val_dataset
     )
 
-    checkpoint_callback = CheckpointControlCallback(trainer, args.checkpoint_path)
+    checkpoint_callback = CheckpointControlCallback(trainer, args.checkpoints_directory)
     trainer.add_callback(checkpoint_callback)
 
     if getattr(args, 'freeze_main_model', False):
