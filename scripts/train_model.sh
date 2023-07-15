@@ -1,8 +1,9 @@
 #!/bin/sh
-VENVNAME=$1
-DEVICES=$2
-CONFIG=$3
+PATH_TO_CONDA=$1
+VENVNAME=$2
+DEVICES=$3
+CONFIG=$4
 
-source ~/miniconda3/bin/activate $VENVNAME
+source ${PATH_TO_CONDA}/miniconda3/bin/activate $VENVNAME
 
 CUDA_VISIBLE_DEVICES=$DEVICES python -u src/mlm.py --config $CONFIG
