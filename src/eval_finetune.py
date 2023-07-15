@@ -3,6 +3,7 @@ import copy
 import math
 import os
 import random
+import sys
 from collections import defaultdict
 
 import numpy as np
@@ -385,7 +386,8 @@ def pos(
         # look for a control file to determine if a trial has already been done, e.g. by a
         # submitted job that was pre-empted before completing all trials
         lang_name = args.transfer_source if do_zero_shot else lang
-        model_dir = os.makedirs(os.path.join(ckpt_path, lang_name, rand_x), exist_ok=True)
+        model_dir = os.path.join(ckpt_path, lang_name, str(rand_x))
+        os.makedirs(model_dir, exist_ok=True)
         checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
         checkpoint_control_exists = os.path.isfile(checkpoint_control_path)
         if checkpoint_control_exists:
@@ -398,12 +400,12 @@ def pos(
 
         # create probe model
         tagger = Tagger(model, len(pos_labels))
+        tagger_bsz = args.batch_size
 
         # only do training if we can't retrieve the existing checkpoint
         if not training_complete:
             # load criterion and optimizer
             tagger_lr = 0.000005
-            tagger_bsz = args.batch_size
             gradient_accumulation = getattr(args, 'gradient_accumulation', 1)
 
             criterion = torch.nn.CrossEntropyLoss(reduction='mean')
@@ -425,9 +427,10 @@ def pos(
                 model_dir=model_dir
             )
         else:
-            print(f"random seed {rand_x} previously trained; reading checkpoint")
+            print(
+                f"{lang_name} random seed {rand_x} previously trained; reading checkpoint", file=sys.stderr
+            )
             num_epochs = control_dict['num_epochs_to_convergence']
-            pass
 
         epochs.append(num_epochs * 1.0)
 
