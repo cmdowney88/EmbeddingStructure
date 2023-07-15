@@ -16,6 +16,50 @@ from data import ShardedTextDataset
 from utils import _xlmr_special_tokens
 
 
+class CheckpointControlCallback(TrainerCallback):
+    """
+    """
+    def __init__(self, trainer: Trainer, checkpoint_path: str):
+        self.trainer = trainer
+        self.checkpoint_path = checkpoint_path
+        self.checkpoint_control_path = os.path.join(
+            checkpoint_path, "checkpoint_control.yml"
+        )
+
+    def on_save(
+        self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs
+    ):
+        output_dir = self.trainer.output_dir
+        last_checkpoint_path = os.path.join(output_dir, f"checkpoint-{state.global_step}")
+        with open(self.checkpoint_control_path, 'w') as fout:
+            print("resume_from_checkpoint: True", file=fout)
+            print(f"last_checkpoint_path: {last_checkpoint_path}", file=fout)
+
+        train_dataset = self.trainer.train_dataset
+        if isinstance(train_dataset, ShardedTextDataset):
+            dataset_save_path = os.path.join(last_checkpoint_path, "train_dataset_state.yml")
+            train_dataset.save(dataset_save_path)
+        
+
+class InitialFreezeCallback(TrainerCallback):
+    """
+    Callback to freeze some model parameters at the beginning of training. The parameter
+    `model_freeze_prefix` controls which parameters to freeze (as a prefix of their name)
+    """
+    def __init__(self, trainer: Trainer, model_freeze_prefix: str):
+        self.trainer = trainer
+        self.model_freeze_prefix = model_freeze_prefix
+
+    def on_train_begin(
+        self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs
+    ):
+        for name, param in self.trainer.model.named_parameters():
+            if name.startswith(self.model_freeze_prefix):
+                param.requires_grad = False
+        print(
+            f"\nAll parameters with prefix {self.model_freeze_prefix} frozen", file=sys.stderr
+        )
+
 class UnfreezeCallback(TrainerCallback):
     """
     Callback to unfreeze the entire model at a certain point in training. The parameter
@@ -27,7 +71,7 @@ class UnfreezeCallback(TrainerCallback):
         self.unfreeze_step_ratio = unfreeze_step_ratio
         self.already_unfrozen = False
 
-    def on_step_end(
+    def on_step_begin(
         self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs
     ):
         reached_unfreeze_step = state.global_step >= int(self.unfreeze_step_ratio * state.max_steps)
@@ -56,6 +100,26 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     random.seed(args.seed)
     os.environ['PYTHONHASHSEED'] = str(args.seed)
+
+    # establish or read a control file to determine whether to resume from a checkpoint
+    os.makedirs(args.checkpoint_path, exist_ok=True)
+    checkpoint_control_path = os.path.join(args.checkpoint_path, "checkpoint_control.yml")
+    checkpoint_control_exists = os.path.isfile(checkpoint_control_path)
+    if not checkpoint_control_exists:
+        with open(checkpoint_control_path, 'w') as fout:
+            print("resume_from_checkpoint: True", file=fout)
+        args.resume_from_checkpoint = False
+    else:
+        control_dict = yaml.load(checkpoint_control_path, Loader=yaml.Loader)
+        args.resume_from_checkpoint = control_dict['resume_from_checkpoint']
+        args.control_dict = control_dict
+        # resume_from_checkpoint==False is only okay if we're starting a new training
+        # run; exit if the folder contains checkpoints not meant to be resumed
+        if not args.resume_from_checkpoint:
+            raise RuntimeError(
+                f"Not resuming from checkpoints in {args.checkpoint_path};"
+                " control file indicates resuming should be blocked"
+            )
 
     # load pretrained model and tokenizer
     model = AutoModelForMaskedLM.from_pretrained(args.hf_model)
@@ -102,10 +166,11 @@ if __name__ == "__main__":
     else:
         tokenizer = AutoTokenizer.from_pretrained(args.hf_model)
 
-    if getattr(args, 'freeze_main_model', False):
-        for name, param in model.named_parameters():
-            if name.startswith(args.model_freeze_prefix):
-                param.requires_grad = False
+    # for sanity, make sure all parameters require gradients initially;
+    # this is mostly in response to new embeddings not having grads, but might as
+    # well make sure everything is trainable at first
+    for p in model.parameters():
+        p.requires_grad = True
 
     # move model to GPU if available
     device = torch.device('cuda')
@@ -113,9 +178,14 @@ if __name__ == "__main__":
 
     # prepare training data
     if getattr(args, 'sharded_train_dataset', False):
-        train_dataset = ShardedTextDataset(
-            args.train_dataset_path, tokenizer, max_seq_length=args.max_seq_len
-        )
+        if args.resume_from_checkpoint:
+            last_checkpoint_path = args.control_dict['last_checkpoint_path']
+            checkpoint_dataset_path = os.path.join(last_checkpoint_path, "train_dataset_state.yml")
+            train_dataset = ShardedTextDataset.from_saved(checkpoint_dataset_path, tokenizer)
+        else:
+            train_dataset = ShardedTextDataset(
+                args.train_dataset_path, tokenizer, max_seq_length=args.max_seq_len
+            )
     else:
         train_dataset = LineByLineTextDataset(
             tokenizer=tokenizer, file_path=args.train_dataset_path, block_size=args.max_seq_len
@@ -169,6 +239,13 @@ if __name__ == "__main__":
         eval_dataset=val_dataset
     )
 
+    checkpoint_callback = CheckpointControlCallback(trainer, args.checkpoint_path)
+    trainer.add_callback(checkpoint_callback)
+
+    if getattr(args, 'freeze_main_model', False):
+        freeze_callback = InitialFreezeCallback(trainer, args.model_freeze_prefix)
+        trainer.add_callback(freeze_callback)
+
     # may want to unfreeze transformer blocks at a point during training; use this custom callback
     # to do so
     if getattr(args, 'freeze_main_model', False) and getattr(args, 'unfreeze_step_ratio', None):
@@ -176,7 +253,11 @@ if __name__ == "__main__":
         trainer.add_callback(unfreeze_callback)
 
     # start training
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+
+    # when training is finished, block resuming from checkpoint
+    with open(checkpoint_control_path, 'w') as fout:
+        print("resume_from_checkpoint: False", file=fout)
 
     best_checkpoint_path = trainer.state.best_model_checkpoint
     print(f"Best checkpoint: {best_checkpoint_path}", file=sys.stderr)
