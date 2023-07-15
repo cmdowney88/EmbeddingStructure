@@ -40,7 +40,7 @@ class CheckpointControlCallback(TrainerCallback):
         if isinstance(train_dataset, ShardedTextDataset):
             dataset_save_path = os.path.join(last_checkpoint_path, "train_dataset_state.yml")
             train_dataset.save(dataset_save_path)
-        
+
 
 class InitialFreezeCallback(TrainerCallback):
     """
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         args.control_dict = control_dict
         last_checkpoint_name = control_dict['last_checkpoint']
         last_checkpoint_name = Path(last_checkpoint_name).stem
-        
+
         # resume_from_checkpoint==False is only okay if we're starting a new training
         # run; exit if the folder contains checkpoints not meant to be resumed
         if not args.resume_from_checkpoint:
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         # Get the vocab and embeddings from base XLM-R model
         old_tokenizer = AutoTokenizer.from_pretrained(args.hf_model)
         old_vocab = old_tokenizer.get_vocab()
-        old_embeddings = model.get_input_embeddings().weight
+        old_embeddings = model.get_input_embeddings().weight.detach()
 
         # read in the new tokenizer, initialize new embeddings
         new_tokenizer = XLMRobertaTokenizer(vocab_file=args.new_vocab_file)
@@ -154,18 +154,24 @@ if __name__ == "__main__":
             )
             print(f"Loaded new embeddings from {args.new_embedding_path}", file=sys.stderr)
         else:
-            new_embeddings = torch.nn.Embedding(new_vocab_size, model.config.hidden_size)
+            new_embedding_weights = torch.nn.Embedding(
+                new_vocab_size, model.config.hidden_size
+            ).weight.detach()
             # set the embeddings for special tokens to be identical to XLM-R
             for special_token in _xlmr_special_tokens:
                 old_token_index = old_vocab[special_token]
                 new_token_index = new_vocab[special_token]
-                new_embeddings.weight[new_token_index] = old_embeddings[old_token_index]
+                new_embedding_weights[new_token_index] = old_embeddings[old_token_index]
+            new_embeddings = torch.nn.Embedding.from_pretrained(
+                new_embedding_weights, padding_idx=1
+            )
             print("Initialized new embeddings randomly", file=sys.stderr)
 
         # set the model's new embeddings, then tie weights to output layer
         model.set_input_embeddings(new_embeddings)
         model.tie_weights()
         model.config.vocab_size = new_vocab_size
+
     # if the tokenizer/vocab path is different from the model path, load that vocab
     elif getattr(args, 'vocab_file', False):
         tokenizer = XLMRobertaTokenizer(vocab_file=args.vocab_file)
