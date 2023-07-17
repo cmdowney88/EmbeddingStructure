@@ -160,6 +160,9 @@ def train_model(
     model.train()
     model.to('cuda:0')
 
+    best_model_path = os.path.join(model_dir, "best_model.pt")
+    latest_model_path = os.path.join(model_dir, "latest_model.pt")
+
     max_valid_acc = 0
     patience_step = 0
     accumulation_counter = 0
@@ -169,9 +172,24 @@ def train_model(
         random.shuffle(data)
         data = data[:total_examples]
 
+    checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
+    checkpoint_control_exists = os.path.isfile(checkpoint_control_path)
+    if checkpoint_control_exists:
+        with open(checkpoint_control_path, 'r') as fin:
+            control_dict = yaml.load(fin, Loader=yaml.Loader)
+            resume_from_epoch = control_dict['resume_from_epoch']
+        if resume_from_epoch and not control_dict['training_complete']:
+            model.load_state_dict(torch.load(latest_model_path))
+            print(f"Resuming training from epoch {resume_from_epoch}", file=sys.stderr)
+    else:
+        resume_from_epoch = None
+
     # training epochs
     for epoch_id in tqdm(range(0, epochs), desc='training loop', total=epochs, unit='epoch'):
         random.shuffle(data)
+        # fast forward to the latest checkpointed epoch, if any
+        if resume_from_epoch and ((epoch_id + 1) <= resume_from_epoch):
+            continue
 
         # TODO: make this and eval work with new data format (and add feature
         # handling to forward()) go over training data
@@ -196,6 +214,13 @@ def train_model(
 
         if ((epoch_id + 1) % eval_every) == 0:
             valid_acc = evaluate_model(model, valid_data, pad_idx, bsz=bsz)
+            model.train()
+
+            torch.save(model.state_dict(), latest_model_path)
+            with open(checkpoint_control_path, 'w') as fout:
+                print("training_complete: False", file=fout)
+                print("num_epochs_to_convergence: null", file=fout)
+                print(f"resume_from_epoch: {epoch_id + 1}", file=fout)
 
             # use train loss to see if we need to stop
             if max_valid_acc > valid_acc:
@@ -206,17 +231,16 @@ def train_model(
             else:
                 max_valid_acc = valid_acc
                 # checkpoint model
-                best_model_path = os.path.join(model_dir, "best_model.pt")
                 torch.save(model.state_dict(), best_model_path)
                 patience_step = 0
 
     # output a marker that training is completed, as well as the number of epochs to convergence;
     # this is so trials need not be repeated if a job is preempted
     num_epochs_to_convergence = (epoch_id + 1 - (patience_step * eval_every))
-    checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
     with open(checkpoint_control_path, 'w') as fout:
         print("training_complete: True", file=fout)
         print(f"num_epochs_to_convergence: {num_epochs_to_convergence}", file=fout)
+        print("resume_from_epoch: null", file=fout)
 
     # return model, number of training epochs for best ckpt
     return model, num_epochs_to_convergence
