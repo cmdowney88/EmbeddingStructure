@@ -9,9 +9,9 @@ random_weights: False
 
 # model options
 model_class: xlmr
-model_name: models/uralic/cpt_emb-32k-script+pos+ident/checkpoint-90000
+model_name: models/uralic/cpt-full_emb-32k-script+pos+ident/checkpoint-100000
 tokenizer_path: tokenizers/uralic_spm_32k.model
-checkpoint_path: ./models/uralic/pos/equal_train/xlmr_cpt_emb-32k-script+pos+ident
+checkpoint_path: models/uralic/pos/equal_train/xlmr_cpt-full_emb-32k-script+pos+ident
 
 # training options
 random_seed: 1
