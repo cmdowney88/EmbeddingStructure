@@ -234,6 +234,7 @@ if __name__ == "__main__":
         eval_steps=args.eval_steps,
         save_steps=args.save_steps,
         save_total_limit=args.saved_checkpoints_limit,
+        load_best_model_at_end=True,
         output_dir=args.checkpoints_directory,
         overwrite_output_dir=True,
         weight_decay=float(args.weight_decay),
