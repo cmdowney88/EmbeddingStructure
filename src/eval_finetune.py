@@ -14,8 +14,11 @@ from tqdm import tqdm
 
 from utils import (
     MODEL_CLASSES, _consolidate_features, _label_spaces, _lang_choices, _model_names, _task_choices,
-    load_hf_model, load_ud_splits
+    load_hf_model, load_ud_splits, load_ner_splits
 )
+
+# address 'cuda out of memory' error #TODO delete
+#os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:2048"
 
 
 class Tagger(torch.nn.Module):
@@ -160,9 +163,6 @@ def train_model(
     model.train()
     model.to('cuda:0')
 
-    best_model_path = os.path.join(model_dir, "best_model.pt")
-    latest_model_path = os.path.join(model_dir, "latest_model.pt")
-
     max_valid_acc = 0
     patience_step = 0
     accumulation_counter = 0
@@ -172,24 +172,9 @@ def train_model(
         random.shuffle(data)
         data = data[:total_examples]
 
-    checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
-    checkpoint_control_exists = os.path.isfile(checkpoint_control_path)
-    if checkpoint_control_exists:
-        with open(checkpoint_control_path, 'r') as fin:
-            control_dict = yaml.load(fin, Loader=yaml.Loader)
-            resume_from_epoch = control_dict['resume_from_epoch']
-        if resume_from_epoch and not control_dict['training_complete']:
-            model.load_state_dict(torch.load(latest_model_path))
-            print(f"Resuming training from epoch {resume_from_epoch}", file=sys.stderr)
-    else:
-        resume_from_epoch = None
-
     # training epochs
     for epoch_id in tqdm(range(0, epochs), desc='training loop', total=epochs, unit='epoch'):
         random.shuffle(data)
-        # fast forward to the latest checkpointed epoch, if any
-        if resume_from_epoch and ((epoch_id + 1) <= resume_from_epoch):
-            continue
 
         # TODO: make this and eval work with new data format (and add feature
         # handling to forward()) go over training data
@@ -214,13 +199,6 @@ def train_model(
 
         if ((epoch_id + 1) % eval_every) == 0:
             valid_acc = evaluate_model(model, valid_data, pad_idx, bsz=bsz)
-            model.train()
-
-            torch.save(model.state_dict(), latest_model_path)
-            with open(checkpoint_control_path, 'w') as fout:
-                print("training_complete: False", file=fout)
-                print("num_epochs_to_convergence: null", file=fout)
-                print(f"resume_from_epoch: {epoch_id + 1}", file=fout)
 
             # use train loss to see if we need to stop
             if max_valid_acc > valid_acc:
@@ -231,16 +209,17 @@ def train_model(
             else:
                 max_valid_acc = valid_acc
                 # checkpoint model
+                best_model_path = os.path.join(model_dir, "best_model.pt")
                 torch.save(model.state_dict(), best_model_path)
                 patience_step = 0
 
     # output a marker that training is completed, as well as the number of epochs to convergence;
     # this is so trials need not be repeated if a job is preempted
     num_epochs_to_convergence = (epoch_id + 1 - (patience_step * eval_every))
+    checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
     with open(checkpoint_control_path, 'w') as fout:
         print("training_complete: True", file=fout)
         print(f"num_epochs_to_convergence: {num_epochs_to_convergence}", file=fout)
-        print("resume_from_epoch: null", file=fout)
 
     # return model, number of training epochs for best ckpt
     return model, num_epochs_to_convergence
@@ -574,6 +553,262 @@ def set_up_pos_zero_shot(args):
         max_epochs=args.epochs,
         max_train_examples=args.max_train_examples
     )
+    
+# task expects .json files for train and validation for the given language in
+# the data_path dir
+def ner(
+    args,
+    model,
+    tokenizer,
+    data_path,
+    ckpt_path,
+    lang='en',
+    max_epochs=50,
+    max_train_examples=math.inf
+):
+    """
+    Conduct fine-tuning and evaluation for an NER task. Fine-tune the model on four different
+    random seeds per training set. If `args.zero_shot_transfer` is true and
+    `args.transfer_source` is specified, conduct zero-shot transfer. Zero-shot transfer assumes that
+    only test set(s) are available for the language(s) being evaluated. If doing zero-shot,
+    fine-tune the model on the training/dev sets available for `args.transfer_source`, then loop
+    over the specified language test sets at eval time
+    """
+    ner_labels = _label_spaces['NER']
+    is_zero_shot = getattr(args, 'zero_shot_transfer', False)
+    has_transfer_source = getattr(args, 'transfer_source', False)
+    do_zero_shot = is_zero_shot and has_transfer_source
+
+    # If doing zero-shot transfer, load the train and dev sets for `args.transfer_source` and load
+    # the test set for each of the languages in `args.langs`. Pre-process the WikiAnn data
+    if do_zero_shot:
+        train_valid_data = load_ner_splits(
+            data_path, args.transfer_source, splits=['train', 'dev']
+        )
+        train_text_data = train_valid_data['train']
+        valid_text_data = train_valid_data['dev']
+        test_text_data = {
+            lg: load_ner_splits(data_path, lg, splits=['test'])
+            for lg in args.langs
+        }
+        
+        # preprocess_ud_word_level should work for the WikiAnn data as well as the UD data (no changes needed)
+        train_data = preprocess_ud_word_level(tokenizer, train_text_data, ner_labels)
+        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, ner_labels)
+        test_data = {
+            lg: preprocess_ud_word_level(tokenizer, data, ner_labels)
+            for lg, data in test_text_data.items()
+        }
+
+        scores = defaultdict(list)
+    # If not doing zero-shot transfer, pre-process the train, dev, and test sets for the language
+    # in question. Also get and log the majority label baselines
+    else:
+        print("########")
+        print(f"Beginning NER evaluation for {lang}")
+        # load NER train and eval data for probing on given langauge
+        ner_splits = load_ner_splits(data_path, lang)
+        train_text_data, valid_text_data, test_text_data = [
+            ner_splits[x] for x in ['train', 'dev', 'test']
+        ]
+
+        # Get majority sense baseline
+        majority_baseline, words = majority_label_baseline(train_text_data, ner_labels)
+        print(f"majority label baseline: {round(majority_baseline, 2)}")
+
+        per_word_baseline = per_word_majority_baseline(test_text_data, words, ner_labels)
+        print(f"per word majority baseline: {round(per_word_baseline, 2)}")
+        
+        # preprocess_ud_word_level should work for the WikiAnn data as well as the UD data (no changes needed)
+        # preprocessing can take in a hidden layer id if we want to probe inside model
+        train_data = preprocess_ud_word_level(tokenizer, train_text_data, ner_labels)
+        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, ner_labels)
+        test_data = preprocess_ud_word_level(tokenizer, test_text_data, ner_labels)
+        
+        #TODO delete after testing
+        total_examples = min(len(train_data), args.max_train_examples)
+        print(f'{lang} total examples:\t{total_examples}')
+        """ #TODO uncomment
+
+        scores = []
+
+    random_seeds = [1, 2, 3, 4]
+    epochs = []
+    
+    for rand_x in random_seeds:
+        # set random seeds for model init, data shuffling
+        torch.cuda.manual_seed(rand_x)
+        torch.cuda.manual_seed_all(rand_x)
+        np.random.seed(rand_x)
+        random.seed(rand_x)
+        
+        # look for a control file to determine if a trial has already been done, e.g. by a
+        # submitted job that was pre-empted before completing all trials
+        lang_name = args.transfer_source if do_zero_shot else lang
+        model_dir = os.path.join(ckpt_path, lang_name, str(rand_x))
+        os.makedirs(model_dir, exist_ok=True)
+        checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
+        checkpoint_control_exists = os.path.isfile(checkpoint_control_path)
+        if checkpoint_control_exists:
+            with open(checkpoint_control_path, 'r') as fin:
+                control_dict = yaml.load(fin, Loader=yaml.Loader)
+                training_complete = control_dict['training_complete']
+        else:
+            control_dict = None
+            training_complete = False
+
+        # create probe model
+        tagger = Tagger(model, len(ner_labels))
+        tagger_bsz = args.batch_size
+
+        # only do training if we can't retrieve the existing checkpoint
+        if not training_complete:
+            # load criterion and optimizer
+            tagger_lr = 0.000005
+            gradient_accumulation = getattr(args, 'gradient_accumulation', 1)
+
+            criterion = torch.nn.CrossEntropyLoss(reduction='mean')
+            optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
+
+            # train classification model
+            tagger, num_epochs = train_model(
+                tagger,
+                train_data,
+                valid_data,
+                criterion,
+                optimizer,
+                tokenizer.pad_token_id,
+                bsz=tagger_bsz,
+                gradient_accumulation=gradient_accumulation,
+                epochs=max_epochs,
+                max_train_examples=max_train_examples,
+                patience=args.patience,
+                model_dir=model_dir
+            )
+        else:
+            print(
+                f"{lang_name} random seed {rand_x} previously trained; reading checkpoint", file=sys.stderr
+            )
+            num_epochs = control_dict['num_epochs_to_convergence']
+
+        epochs.append(num_epochs * 1.0)
+        
+        # load best checkpoint for model state
+        best_model_path = os.path.join(model_dir, "best_model.pt")
+        tagger.load_state_dict(torch.load(best_model_path))
+
+        print(f"random seed: {rand_x}")
+        print(f"num epochs: {num_epochs}")
+
+        # evaluate classificaiton model
+        if do_zero_shot:
+            for lg in args.langs:
+                acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz)
+                acc = acc * 100
+                scores[lg].append(acc)
+                print(f"{lg} accuracy: {round(acc, 2)}")
+            print("----")
+        else:
+            acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz)
+            acc = acc * 100
+            scores.append(acc)
+            print(f"accuracy: {round(acc, 2)}")
+            print("----")
+
+        # reinitalize the model for each trial if using randomly initialized encoder
+        if args.random_weights:
+            model, tokenizer = load_hf_model(
+                args.model_class,
+                args.model_name,
+                task=args.task,
+                random_weights=args.random_weights
+            )
+            model.cuda()
+            model.eval()
+            
+            # preprocess_ud_word_level should work for the WikiAnn data as well as the UD data (no changes needed)
+            if do_zero_shot:
+                train_data = preprocess_ud_word_level(tokenizer, train_text_data, ner_labels)
+                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, ner_labels)
+                test_data = {
+                    lg: preprocess_ud_word_level(tokenizer, data, ner_labels)
+                    for lg, data in test_text_data.items()
+                }
+            else:
+                train_data = preprocess_ud_word_level(tokenizer, train_text_data, ner_labels)
+                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, ner_labels)
+                test_data = preprocess_ud_word_level(tokenizer, test_text_data, ner_labels)
+
+    print("all trials finished")
+    mean_epochs, epochs_stdev = mean_stdev(epochs)
+    print(f"mean epochs: {round(mean_epochs, 2)}")
+
+    if do_zero_shot:
+        for lg in args.langs:
+            mean_score, score_stdev = mean_stdev(scores[lg])
+            print(f"{lg} mean score: {round(mean_score, 2)}")
+            print(f"{lg} standard deviation: {round(score_stdev, 2)}")
+    else:
+        mean_score, score_stdev = mean_stdev(scores)
+        print(f"mean score: {round(mean_score, 2)}")
+        print(f"standard deviation: {round(score_stdev, 2)}")"""
+
+    
+def set_up_ner(args):
+    """
+    For each language being evaluated, set up NER task by loading a huggingface
+    model/tokenizer then calling the `ner` function
+    """
+    # Loop over languages to eval
+    for lang in args.langs:
+        # load huggingface model, tokenizer
+        model, tokenizer = load_hf_model(
+            args.model_class,
+            args.model_name,
+            task=args.task,
+            random_weights=args.random_weights,
+            tokenizer_path=args.tokenizer_path
+        )
+        """model.cuda() #TODO uncomment
+        model.eval()""" 
+        # Do pos task
+        ner(
+            args,
+            model,
+            tokenizer,
+            args.dataset_path,
+            args.checkpoint_path,
+            lang=lang,
+            max_epochs=args.epochs,
+            max_train_examples=args.max_train_examples
+        )
+    
+def set_up_ner_zero_shot(args):
+    """
+    Set up NER task by loading a huggingface model/tokenizer then calling the `ner`
+    function. Unlike `set_up_ner`, the loop over evaluation languages occurs inside the `ner`
+    function in the zero-shot case, since the model is fine-tuned only on `transfer-source`
+    """
+    # load huggingface model, tokenizer
+    model, tokenizer = load_hf_model(
+        args.model_class,
+        args.model_name,
+        task=args.task,
+        random_weights=args.random_weights,
+        tokenizer_path=args.tokenizer_path
+    )
+    model.cuda()
+    model.eval()
+    # Do pos task
+    ner(
+        args,
+        model,
+        tokenizer,
+        args.dataset_path,
+        args.checkpoint_path,
+        max_epochs=args.epochs,
+        max_train_examples=args.max_train_examples
+    )
 
 
 if __name__ == "__main__":
@@ -616,16 +851,25 @@ if __name__ == "__main__":
     random.seed(args.random_seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-
-    # Normal POS eval assumes a train, dev, and test set for each language being evaluated.
-    # Zero-shot POS assumes a test set is available for each language in question, and that
-    # train/dev sets are availalble for `args.transfer_source`
-    if args.zero_shot_transfer and args.transfer_source:
-        print(
-            f"Doing zero-shot transfer from source {args.transfer_source} to languages {', '.join(args.langs)}"
-        )
-        set_up_pos_zero_shot(args)
+    
+    if args.task == 'ner':
+        if args.zero_shot_transfer and args.transfer_source:
+            print(
+                f"Doing zero-shot transfer from source {args.transfer_source} to languages {', '.join(args.langs)}"
+            )
+            set_up_ner_zero_shot(args)
+        else:
+            set_up_ner(args)
     else:
-        set_up_pos(args)
+        # Normal POS eval assumes a train, dev, and test set for each language being evaluated.
+        # Zero-shot POS assumes a test set is available for each language in question, and that
+        # train/dev sets are availalble for `args.transfer_source`
+        if args.zero_shot_transfer and args.transfer_source:
+            print(
+                f"Doing zero-shot transfer from source {args.transfer_source} to languages {', '.join(args.langs)}"
+            )
+            set_up_pos_zero_shot(args)
+        else:
+            set_up_pos(args)
 
 #EOF
