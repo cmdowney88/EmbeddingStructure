@@ -3,16 +3,16 @@ task: pos
 zero_shot_transfer: False
 transfer_source: None
 # no need to do Erzya: identical to equal_train run
-langs: ['sme', 'et', 'fi', 'hu', 'ru']
+langs: ['sme', 'et', 'fi', 'hu']
 dataset_path: data/ud-uralic
 # whether to start with a randomly-initialized model
 random_weights: False
 
 # model options
 model_class: xlmr
-model_name: models/uralic/cpt_emb-32k-script+pos+ident/checkpoint-90000
+model_name: models/uralic/cpt_emb-32k-script+ident/checkpoint-100000
 tokenizer_path: tokenizers/uralic_spm_32k.model
-checkpoint_path: ./models/uralic/pos/equal_train/xlmr_cpt_emb-32k-script+pos+ident
+checkpoint_path: models/uralic/pos/full_train/xlmr_cpt_emb-32k-script+ident
 
 # training options
 random_seed: 1

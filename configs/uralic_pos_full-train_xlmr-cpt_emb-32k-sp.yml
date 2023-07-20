@@ -2,19 +2,17 @@
 task: pos
 zero_shot_transfer: False
 transfer_source: None
-langs: ['myv', 'sme', 'et', 'fi', 'hu']
-# might sometimes need to break the list up if there's risk of the node being pre-empted
-# langs: ['myv', 'sme', 'et', 'hu']
-# langs: ['fi']
+# no need to do Erzya: identical to equal_train run
+langs: ['sme', 'et', 'fi', 'hu']
 dataset_path: data/ud-uralic
 # whether to start with a randomly-initialized model
 random_weights: False
 
 # model options
 model_class: xlmr
-model_name: models/uralic/cpt-full/checkpoint-94000
-tokenizer_path: xlm-roberta-base
-checkpoint_path: models/uralic/pos/full_train/xlmr_cpt
+model_name: models/uralic/cpt_emb-32k-script+pos/checkpoint-100000
+tokenizer_path: tokenizers/uralic_spm_32k.model
+checkpoint_path: models/uralic/pos/full_train/xlmr_cpt_emb-32k-script+pos
 
 # training options
 random_seed: 1
