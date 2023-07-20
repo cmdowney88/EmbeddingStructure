@@ -39,6 +39,8 @@ _label_spaces = {
         'X'],
     }
 
+_xlmr_special_tokens = ['<s>', '</s>', '<unk>', '<pad>', '<mask>']
+
 
 #loads tokenizer and model based on given model type and name
 def load_hf_model(model_type, model_name, task='ppl', random_weights=False, tokenizer_path=None):

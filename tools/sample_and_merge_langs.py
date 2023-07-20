@@ -42,9 +42,9 @@ orig_probs = {
     for lang, subdict in lang_data.items()
 }
 
-if hasattr(args, 'composition_file', False):
+if getattr(args, 'composition_file', False):
     with open("language_composition.csv", 'w') as fout:
-    	print("language, lines, proportion", file=fout)
+        print("language, lines, proportion", file=fout)
         for language, subdict in lang_data.items():
             print(f"{language}, {subdict['length']}, {orig_probs[language]}", file=fout)
 

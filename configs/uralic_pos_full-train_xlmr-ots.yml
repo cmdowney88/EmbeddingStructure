@@ -2,7 +2,10 @@
 task: pos
 zero_shot_transfer: False
 transfer_source: None
-langs: ['myv', 'sme', 'et', 'fi', 'hu', 'ru']
+langs: ['myv', 'sme', 'et', 'fi', 'hu']
+# might sometimes need to break the list in half if there's risk of the node being pre-empted
+# langs: ['myv', 'sme', 'et', 'hu']
+# langs: ['fi']
 dataset_path: data/ud-uralic
 # whether to start with a randomly-initialized model
 random_weights: False
@@ -10,7 +13,7 @@ random_weights: False
 # model options
 model_class: xlmr
 model_name: xlm-roberta-base
-checkpoint_path: ./models/uralic/pos/full_train/xlmr_ots
+checkpoint_path: models/uralic/pos/full_train/xlmr_ots
 
 # training options
 random_seed: 1

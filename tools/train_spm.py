@@ -29,11 +29,11 @@ spm.SentencePieceTrainer.Train(
     pad_id=1,
     eos_id=2,
     unk_id=3,
-    bos_piece='[CLS]',
-    pad_piece='[PAD]',
-    eos_piece='[SEP]',
-    unk_piece='[UNK]',
-    user_defined_symbols='[MASK]',
+    bos_piece='<s>',
+    pad_piece='<pad>',
+    eos_piece='</s>',
+    unk_piece='<unk>',
+    user_defined_symbols='<mask>',
     model_type=args.tokenizer_model,
     character_coverage=0.999
 )
