@@ -1,0 +1,99 @@
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning POS evaluation for sme
+majority label baseline: 22.99
+per word majority baseline: 61.65
+random seed: 1
+num epochs: 62
+accuracy: 72.64
+----
+random seed: 2
+num epochs: 64
+accuracy: 74.85
+----
+random seed: 3
+num epochs: 62
+accuracy: 72.55
+----
+random seed: 4
+num epochs: 64
+accuracy: 69.68
+----
+all trials finished
+mean epochs: 63.0
+mean score: 72.43
+standard deviation: 1.83
+########
+Beginning POS evaluation for et
+majority label baseline: 19.97
+per word majority baseline: 69.37
+random seed: 1
+num epochs: 60
+accuracy: 93.44
+----
+random seed: 2
+num epochs: 62
+accuracy: 93.62
+----
+random seed: 3
+num epochs: 64
+accuracy: 93.51
+----
+random seed: 4
+num epochs: 64
+accuracy: 93.59
+----
+all trials finished
+mean epochs: 62.5
+mean score: 93.54
+standard deviation: 0.07
+########
+Beginning POS evaluation for fi
+majority label baseline: 23.24
+per word majority baseline: 70.78
+random seed: 1
+num epochs: 60
+accuracy: 95.54
+----
+random seed: 2
+num epochs: 60
+accuracy: 95.51
+----
+random seed: 3
+num epochs: 56
+accuracy: 95.53
+----
+random seed: 4
+num epochs: 64
+accuracy: 95.56
+----
+all trials finished
+mean epochs: 60.0
+mean score: 95.53
+standard deviation: 0.02
+########
+Beginning POS evaluation for hu
+majority label baseline: 22.42
+per word majority baseline: 60.37
+random seed: 1
+num epochs: 64
+accuracy: 90.47
+----
+random seed: 2
+num epochs: 64
+accuracy: 93.41
+----
+random seed: 3
+num epochs: 62
+accuracy: 94.83
+----
+random seed: 4
+num epochs: 62
+accuracy: 94.89
+----
+all trials finished
+mean epochs: 63.0
+mean score: 93.4
+standard deviation: 1.79

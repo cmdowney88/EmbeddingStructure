@@ -13,7 +13,7 @@ random_weights: False
 # model options
 model_class: xlmr
 model_name: xlm-roberta-base
-checkpoint_path: ./models/uralic/pos/equal_train/xlmr_ots
+checkpoint_path: models/uralic/pos/equal_train/xlmr_ots
 
 # training options
 random_seed: 1
