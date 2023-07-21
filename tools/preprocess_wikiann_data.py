@@ -22,7 +22,7 @@ test_size = 0.1
 seed = 1
 
 if __name__ == '__main__':
-    #get list of input files
+    # get list of input files
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_folder', type=str)
     parser.add_argument('--output_folder', type=str)
@@ -32,11 +32,14 @@ if __name__ == '__main__':
     all_train = []
     all_dev = []
     
-    #loop over input files
+    # loop over input files
     for infile in os.listdir(args.input_folder):
+        # input filenames have the form 'wikiann-lang.bio' where 'lang' is the 
+        # language abbreviation. Remove 'wikiann-' from start of filename and 
+        # '.bio' from end of filename, to get the language abbreviation
         lang = infile[8:-4]
         
-        #split text into groups of lines
+        # split text into groups of lines
         filepath = os.path.join(args.input_folder, infile)
         with open(filepath, 'r', encoding='utf-8') as reader:
             text = reader.read()
@@ -49,27 +52,27 @@ if __name__ == '__main__':
         # remove lines without content
         line_groups = [x for x in line_groups if len(x[0]) > 1]
         
-        #print number of line groups
+        # print number of line groups
         print(f'{lang}\t{len(line_groups)}')
         
-        #empty list for data instances
+        # empty list for data instances
         instances = []
         
-        #loop over line groups
+        # loop over line groups
         for group in line_groups:
-            #make dictionary of lists containing tokens, ner_tags, langs, spans
+            # make dictionary of lists containing tokens, ner_tags, langs, spans
             instance = defaultdict(lambda: [])
             instance['tokens'] = [line[0] for line in group]
             instance['ner_tags'] = [tag2int[line[-1]] for line in group]
             instance['langs'] = [lang for x in range(len(group))]
             instance['spans'] = [line[-1].split('-')[-1]+': '+line[1] for line in group if line[-1][0] == 'B']
             
-            #add dictionary to data instances list
+            # add dictionary to data instances list
             instances.append(instance)
             
-        #train, dev, test split
+        # train, dev, test split
         if len(instances) < zero_shot_threshold:
-            #save data instances list to json
+            # save data instances list to json
             outfile = f'{infile.split(".")[0]}_test.json'
             with open(os.path.join(args.output_folder, outfile), 'w', encoding='utf-8') as writer:
                 json.dump(instances, writer, ensure_ascii=False)
@@ -87,7 +90,7 @@ if __name__ == '__main__':
             all_train.extend(splits['train'])
             all_dev.extend(splits['dev'])
             
-            #save train, dev and test to separate json files
+            # save train, dev and test to separate json files
             for name in splits:
                 outfile = f'{infile.split(".")[0]}_{name}.json'
                 with open(os.path.join(args.output_folder, outfile), 'w', encoding='utf-8') as writer:
