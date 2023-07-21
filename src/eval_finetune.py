@@ -17,10 +17,6 @@ from utils import (
     load_hf_model, load_ud_splits, load_ner_splits
 )
 
-# address 'cuda out of memory' error #TODO delete
-#os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:2048"
-
-
 class Tagger(torch.nn.Module):
     """
     Tagger class for conducting classification with a pre-trained model. Takes in the pre-trained
@@ -50,7 +46,7 @@ class Tagger(torch.nn.Module):
         return output
 
 
-def preprocess_ud_word_level(tokenizer, dataset, label_space, layer_id=-1):
+def whitespace_to_sentencepiece(tokenizer, dataset, label_space, layer_id=-1):
     """
     Pre-process the text data from a UD dataset using a huggingface tokenizer, keeping track of the
     mapping between word and subword tokenizations. Break up sentences in the dataset that are
@@ -344,10 +340,10 @@ def pos(
             for lg in args.langs
         }
 
-        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels)
         test_data = {
-            lg: preprocess_ud_word_level(tokenizer, data, pos_labels)
+            lg: whitespace_to_sentencepiece(tokenizer, data, pos_labels)
             for lg, data in test_text_data.items()
         }
 
@@ -371,9 +367,9 @@ def pos(
         print(f"per word majority baseline: {round(per_word_baseline, 2)}")
 
         # preprocessing can take in a hidden layer id if we want to probe inside model
-        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
-        test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels)
+        test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, pos_labels)
 
         scores = []
 
@@ -471,16 +467,16 @@ def pos(
             model.eval()
 
             if do_zero_shot:
-                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels)
                 test_data = {
-                    lg: preprocess_ud_word_level(tokenizer, data, pos_labels)
+                    lg: whitespace_to_sentencepiece(tokenizer, data, pos_labels)
                     for lg, data in test_text_data.items()
                 }
             else:
-                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
-                test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels)
+                test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, pos_labels)
 
     print("all trials finished")
     mean_epochs, epochs_stdev = mean_stdev(epochs)
@@ -592,11 +588,10 @@ def ner(
             for lg in args.langs
         }
         
-        # preprocess_ud_word_level should work for the WikiAnn data as well as the UD data (no changes needed)
-        train_data = preprocess_ud_word_level(tokenizer, train_text_data, ner_labels)
-        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, ner_labels)
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels)
         test_data = {
-            lg: preprocess_ud_word_level(tokenizer, data, ner_labels)
+            lg: whitespace_to_sentencepiece(tokenizer, data, ner_labels)
             for lg, data in test_text_data.items()
         }
 
@@ -619,16 +614,10 @@ def ner(
         per_word_baseline = per_word_majority_baseline(test_text_data, words, ner_labels)
         print(f"per word majority baseline: {round(per_word_baseline, 2)}")
         
-        # preprocess_ud_word_level should work for the WikiAnn data as well as the UD data (no changes needed)
         # preprocessing can take in a hidden layer id if we want to probe inside model
-        train_data = preprocess_ud_word_level(tokenizer, train_text_data, ner_labels)
-        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, ner_labels)
-        test_data = preprocess_ud_word_level(tokenizer, test_text_data, ner_labels)
-        
-        #TODO delete after testing
-        total_examples = min(len(train_data), args.max_train_examples)
-        print(f'{lang} total examples:\t{total_examples}')
-        """ #TODO uncomment
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels)
+        test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, ner_labels)
 
         scores = []
 
@@ -726,18 +715,17 @@ def ner(
             model.cuda()
             model.eval()
             
-            # preprocess_ud_word_level should work for the WikiAnn data as well as the UD data (no changes needed)
             if do_zero_shot:
-                train_data = preprocess_ud_word_level(tokenizer, train_text_data, ner_labels)
-                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, ner_labels)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels)
                 test_data = {
-                    lg: preprocess_ud_word_level(tokenizer, data, ner_labels)
+                    lg: whitespace_to_sentencepiece(tokenizer, data, ner_labels)
                     for lg, data in test_text_data.items()
                 }
             else:
-                train_data = preprocess_ud_word_level(tokenizer, train_text_data, ner_labels)
-                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, ner_labels)
-                test_data = preprocess_ud_word_level(tokenizer, test_text_data, ner_labels)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels)
+                test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, ner_labels)
 
     print("all trials finished")
     mean_epochs, epochs_stdev = mean_stdev(epochs)
@@ -751,7 +739,7 @@ def ner(
     else:
         mean_score, score_stdev = mean_stdev(scores)
         print(f"mean score: {round(mean_score, 2)}")
-        print(f"standard deviation: {round(score_stdev, 2)}")"""
+        print(f"standard deviation: {round(score_stdev, 2)}")
 
     
 def set_up_ner(args):
@@ -769,9 +757,11 @@ def set_up_ner(args):
             random_weights=args.random_weights,
             tokenizer_path=args.tokenizer_path
         )
-        """model.cuda() #TODO uncomment
-        model.eval()""" 
-        # Do pos task
+        
+        model.cuda() 
+        model.eval()
+        
+        # Do ner task
         ner(
             args,
             model,
@@ -860,7 +850,7 @@ if __name__ == "__main__":
             set_up_ner_zero_shot(args)
         else:
             set_up_ner(args)
-    else:
+    elif args.task == 'pos':
         # Normal POS eval assumes a train, dev, and test set for each language being evaluated.
         # Zero-shot POS assumes a test set is available for each language in question, and that
         # train/dev sets are availalble for `args.transfer_source`
@@ -871,5 +861,7 @@ if __name__ == "__main__":
             set_up_pos_zero_shot(args)
         else:
             set_up_pos(args)
+    else:
+        raise Exception(f'Task not recognized: {args.task}')
 
 #EOF
