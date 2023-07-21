@@ -16,7 +16,7 @@ gradient_accumulation_steps: 10
 logging_steps: 250
 eval_strategy: steps
 eval_steps: 5000
-eval_batch_size: 32
+eval_batch_size: 8
 checkpoints_directory: models/uralic/cpt-full_alpha02
 save_steps: 5000
 saved_checkpoints_limit: 2
