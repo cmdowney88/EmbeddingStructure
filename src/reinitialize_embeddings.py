@@ -150,6 +150,8 @@ if __name__ == '__main__':
     parser.add_argument('--unicode_block_table', type=str, default="tools/unicode_scripts_for_embeddings_exploration.txt")
     parser.add_argument('--reinit_by_identity', action='store_true')
     parser.add_argument('--reinit_by_position', action='store_true') # note: only relevant when --reinit_by_script is also used
+    parser.add_argument('--focus_reinit', action='store_true')
+    parser.add_argument('--focus_train_path', type=str, default=None)
     parser.add_argument('--random_seed', type=int, default=1)
     args = parser.parse_args()
 
@@ -190,5 +192,16 @@ if __name__ == '__main__':
 
     if args.reinit_by_identity:
         new_embeddings, identical_tokens = reinitialize_by_identity(old_vocab, old_embeddings, new_vocab, new_embeddings, tokens_to_ignore=_xlmr_special_tokens)
+
+    if args.focus_reinit:
+        # This import might not work since I decided against putting the focus source code in this folder
+        # There's probably some way that you could feed the path to the module as an argument
+        from focus import FOCUS
+        new_embeddings = FOCUS(
+            source_embeddings=old_embeddings,
+            source_tokenizer=old_tokenizer,
+            target_tokenizer=new_tokenizer,
+            target_training_data_path=args.focus_train_path
+        )
 
     torch.save(new_embeddings, args.embedding_output_path)
