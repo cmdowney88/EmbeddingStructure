@@ -283,5 +283,8 @@ if __name__ == "__main__":
     best_checkpoint_path = trainer.state.best_model_checkpoint
     print(f"Best checkpoint: {best_checkpoint_path}", file=sys.stderr)
 
+    best_checkpoint_path = os.path.join(args.checkpoints_directory, 'best-checkpoint')
+    trainer.save_model(best_checkpoint_path)
+
     # evaluate model
     trainer.evaluate()
