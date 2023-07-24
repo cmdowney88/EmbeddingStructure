@@ -47,7 +47,7 @@ class Tagger(torch.nn.Module):
         return output
 
 
-def preprocess_ud_word_level(tokenizer, dataset, label_space, layer_id=-1):
+def preprocess_ud_word_level(tokenizer, dataset, label_space, max_seq_length=512, layer_id=-1):
     """
     Pre-process the text data from a UD dataset using a huggingface tokenizer, keeping track of the
     mapping between word and subword tokenizations. Break up sentences in the dataset that are
@@ -69,7 +69,7 @@ def preprocess_ud_word_level(tokenizer, dataset, label_space, layer_id=-1):
         alignment_id = 1  #offset for cls token
         for word, label in zip(sentence, labels):
             word_ids = tokenizer.encode(' ' + word, add_special_tokens=False)
-            if len(tokens) + len(word_ids) > 511:
+            if len(tokens) + len(word_ids) > (max_seq_length - 1):
                 # add example to dataset
                 if tokenizer.cls_token_id != None:
                     tokens += [tokenizer.sep_token_id]
@@ -365,10 +365,10 @@ def pos(
             for lg in args.langs
         }
 
-        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
+        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
         test_data = {
-            lg: preprocess_ud_word_level(tokenizer, data, pos_labels)
+            lg: preprocess_ud_word_level(tokenizer, data, pos_labels, max_seq_length=args.max_seq_length)
             for lg, data in test_text_data.items()
         }
 
@@ -392,9 +392,9 @@ def pos(
         print(f"per word majority baseline: {round(per_word_baseline, 2)}")
 
         # preprocessing can take in a hidden layer id if we want to probe inside model
-        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
-        test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
+        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels, max_seq_length=args.max_seq_length)
 
         scores = []
 
@@ -492,16 +492,16 @@ def pos(
             model.eval()
 
             if do_zero_shot:
-                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
+                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
                 test_data = {
-                    lg: preprocess_ud_word_level(tokenizer, data, pos_labels)
+                    lg: preprocess_ud_word_level(tokenizer, data, pos_labels, max_seq_length=args.max_seq_length)
                     for lg, data in test_text_data.items()
                 }
             else:
-                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels)
-                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels)
-                test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels)
+                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels, max_seq_length=args.max_seq_length)
 
     print("all trials finished")
     mean_epochs, epochs_stdev = mean_stdev(epochs)
@@ -599,9 +599,11 @@ if __name__ == "__main__":
 
     args.tokenizer_path = getattr(args, 'tokenizer_path', None)
 
+    args.max_seq_length = getattr(args, 'max_seq_length', 512)
+
     # ensure that given lang matches given task
-    for lang in args.langs:
-        assert lang in _lang_choices[args.task]
+    #for lang in args.langs:
+    #    assert lang in _lang_choices[args.task]
 
     print(f"Pytorch version: {torch.__version__}")
     print(f"Pytorch CUDA version: {torch.version.cuda}")
