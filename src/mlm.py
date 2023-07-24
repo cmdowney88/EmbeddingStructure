@@ -216,6 +216,9 @@ if __name__ == "__main__":
         tokenizer=tokenizer, file_path=args.val_dataset_path, block_size=args.max_seq_len
     )
 
+    # Get default values if some training arguments missing
+    args.training_epochs = getattr(args, 'training_epochs', 1.0)
+    args.training_steps = getattr(args, 'training_steps', -1)
     args.logging_steps = getattr(args, 'logging_steps', 500)
 
     # initialize trainer class with training configs
@@ -224,6 +227,7 @@ if __name__ == "__main__":
         data_seed=args.seed,
         log_level="info",
         num_train_epochs=args.training_epochs,
+        max_steps=args.training_steps,
         learning_rate=float(args.learning_rate),
         per_device_train_batch_size=args.train_batch_size,
         logging_steps=args.logging_steps,
