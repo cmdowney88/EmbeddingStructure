@@ -137,7 +137,7 @@ class ShardedTextDataset(Dataset):
                 truncation=True
             )
         self._start_from_beginning()
-        return self.__getitem_(index)
+        return self.__getitem__(index)
 
 
     def save(self, save_path) -> None:
