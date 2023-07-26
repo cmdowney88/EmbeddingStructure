@@ -14,10 +14,10 @@ train_batch_size: 20
 gradient_accumulation_steps: 10
 logging_steps: 250
 eval_strategy: steps
-eval_steps: 5000
+eval_steps: 1000
 eval_batch_size: 128
 checkpoints_directory: models/uralic/cpt-full_emb-32k-focus
-save_steps: 500
+save_steps: 1000
 saved_checkpoints_limit: 2
 load_best_model_at_end: True
 

@@ -1,7 +1,7 @@
 # datasets
-train_dataset_path: data/multilingual/uralic_train_alpha04_20mil
+train_dataset_path: data/multilingual/uralic_train_alpha02_20mil
 sharded_train_dataset: True
-val_dataset_path: data/multilingual/uralic_dev_alpha04.txt
+val_dataset_path: data/multilingual/uralic_dev_alpha02.txt
 mlm_masking_prob: 0.15
 max_seq_len: 512
 
@@ -16,7 +16,7 @@ logging_steps: 250
 eval_strategy: steps
 eval_steps: 1000
 eval_batch_size: 128
-checkpoints_directory: models/uralic/cpt_emb-32k-focus
+checkpoints_directory: models/uralic/cpt-full_alpha02_emb-32k-focus
 save_steps: 1000
 saved_checkpoints_limit: 2
 load_best_model_at_end: True
@@ -25,6 +25,7 @@ load_best_model_at_end: True
 new_vocab_file: tokenizers/uralic_spm_32k.model
 new_embedding_path: tokenizers/uralic_embeddings_32k_focus.pt
 freeze_main_model: True
+unfreeze_step_ratio: 0.1
 model_freeze_prefix: "roberta.encoder"
 weight_decay: 0.0
 lr_scheduler_type: "linear"
