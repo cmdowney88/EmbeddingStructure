@@ -73,7 +73,7 @@ if __name__ == '__main__':
         # train, dev, test split
         if len(instances) < zero_shot_threshold:
             # save data instances list to json
-            outfile = f'{infile.split(".")[0]}_test.json'
+            outfile = f'wikiann_{lang}_test.json'
             with open(os.path.join(args.output_folder, outfile), 'w', encoding='utf-8') as writer:
                 json.dump(instances, writer, ensure_ascii=False)
         else:
@@ -81,7 +81,7 @@ if __name__ == '__main__':
             ts = max(test_size, min_test/len(instances))
             ds = max(dev_size, min_dev/len(instances))
             tr, splits['test'] = train_test_split(instances, test_size=ts, random_state=seed)
-            splits['train'], splits['dev'] = train_test_split(tr, test_size=ds/(1 - ts))
+            splits['train'], splits['dev'] = train_test_split(tr, test_size=ds/(1 - ts), random_state=seed)
             
             print(f'\ttrain\t{len(splits["train"])}\t{len(splits["train"])/len(instances)}')
             print(f'\tdev\t{len(splits["dev"])}\t{len(splits["dev"])/len(instances)}')
@@ -92,16 +92,16 @@ if __name__ == '__main__':
             
             # save train, dev and test to separate json files
             for name in splits:
-                outfile = f'{infile.split(".")[0]}_{name}.json'
+                outfile = f'wikiann_{lang}_{name}.json'
                 with open(os.path.join(args.output_folder, outfile), 'w', encoding='utf-8') as writer:
                     json.dump(splits[name], writer, ensure_ascii=False)
     
     print(f'\n{args.dataset_name}\ttrain\t{len(all_train)}')
     print(f'{args.dataset_name}\tdev\t{len(all_dev)}')
     
-    all_tr_file = f'wikiann-{args.dataset_name}_train.json'
+    all_tr_file = f'wikiann_{args.dataset_name}_train.json'
     with open(os.path.join(args.output_folder, all_tr_file), 'w', encoding='utf-8') as writer:
         json.dump(all_train, writer, ensure_ascii=False)
-    all_dev_file = f'wikiann-{args.dataset_name}_dev.json'
+    all_dev_file = f'wikiann_{args.dataset_name}_dev.json'
     with open(os.path.join(args.output_folder, all_dev_file), 'w', encoding='utf-8') as writer:
         json.dump(all_dev, writer, ensure_ascii=False)
