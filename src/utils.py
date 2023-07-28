@@ -29,8 +29,8 @@ _lang_choices = {
     'pl', 'uk', 'nl', 'sv', 'pt', 'sr', 'hu', 'ca', 'cs', 'fi', 'ar',\
     'ko', 'fa', 'no', 'vi', 'he', 'id', 'ro', 'tr', 'bg', 'et', 'ms',\
     'da', 'sk', 'hr', 'el', 'lt', 'sl', 'th', 'hi', 'lv', 'tl'],
-    'ner': ['et', 'fi', 'fiu-vro', 'hu', 'koi', 'kv', 'mdf', 'mhr', 'mrj', 
-            'myv', 'no', 'ru', 'se', 'udm', 'vep']
+    'ner': ['et', 'fi', 'fiu-vro', 'hu', 'koi', 'komi', 'kv', 'mari', 'mdf', 
+            'mhr', 'mrj', 'myv', 'no', 'ru', 'se', 'udm', 'vep']
 }
 
 _task_choices = ['pos', 'ppl', 'ner']
@@ -169,7 +169,7 @@ def load_ner_splits(data_path, lang, splits=['train', 'dev', 'test']):
     ner_files = os.listdir(data_path)
     split_data = {}
     for split_name in splits:
-        split_file = [x for x in ner_files if f'-{lang}_' in x and f'_{split_name}' in x]
+        split_file = [x for x in ner_files if f'_{lang}_' in x and f'_{split_name}' in x]
         assert len(split_file) == 1
         split_file = split_file[0]
         split_path = os.path.join(data_path, split_file)

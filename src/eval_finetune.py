@@ -11,6 +11,7 @@ import torch
 import yaml
 from torch.nn import functional as F
 from tqdm import tqdm
+from seqeval.metrics import f1_score
 
 from utils import (
     MODEL_CLASSES, _consolidate_features, _label_spaces, _lang_choices, _model_names, _task_choices,
@@ -46,7 +47,7 @@ class Tagger(torch.nn.Module):
         return output
 
 
-def whitespace_to_sentencepiece(tokenizer, dataset, label_space, layer_id=-1):
+def whitespace_to_sentencepiece(tokenizer, dataset, label_space, max_seq_length=512, layer_id=-1):
     """
     Pre-process the text data from a UD dataset using a huggingface tokenizer, keeping track of the
     mapping between word and subword tokenizations. Break up sentences in the dataset that are
@@ -68,7 +69,7 @@ def whitespace_to_sentencepiece(tokenizer, dataset, label_space, layer_id=-1):
         alignment_id = 1  #offset for cls token
         for word, label in zip(sentence, labels):
             word_ids = tokenizer.encode(' ' + word, add_special_tokens=False)
-            if len(tokens) + len(word_ids) > 511:
+            if len(tokens) + len(word_ids) > (max_seq_length - 1):
                 # add example to dataset
                 if tokenizer.cls_token_id != None:
                     tokens += [tokenizer.sep_token_id]
@@ -148,6 +149,7 @@ def train_model(
     criterion,
     optimizer,
     pad_idx,
+    eval_metric,
     bsz=1,
     gradient_accumulation=1,
     epochs=1,
@@ -221,32 +223,60 @@ def train_model(
     return model, num_epochs_to_convergence
 
 
-def evaluate_model(model, data, pad_idx, bsz=1):
+def evaluate_model(model, data, pad_idx, bsz=1, metric='acc'):
     model.eval()
     model.to('cuda:0')
-
-    num_correct = 0.
-    total_num = 0.
-
-    for i in range(0, len(data), bsz):
-        if i + bsz > len(data):
-            batch_data = data[i:]
-        else:
-            batch_data = data[i:i + bsz]
-        input_ids, alignments, labels = batchify(batch_data, pad_idx)
-
-        input_ids = input_ids.to('cuda:0')
-        labels = labels.to('cuda:0')
-
-        with torch.no_grad():
-            output = model.forward(input_ids, alignments)
-        _, preds = torch.topk(output, k=1, dim=-1)
-
-        batch_correct = torch.eq(labels.squeeze(), preds.squeeze()).sum().item()
-        num_correct += batch_correct
-        total_num += labels.shape[-1]
-
-    return num_correct / total_num
+    
+    if metric == 'acc':
+        num_correct = 0.
+        total_num = 0.
+    
+        for i in range(0, len(data), bsz):
+            if i + bsz > len(data):
+                batch_data = data[i:]
+            else:
+                batch_data = data[i:i + bsz]
+            input_ids, alignments, labels = batchify(batch_data, pad_idx)
+    
+            input_ids = input_ids.to('cuda:0')
+            labels = labels.to('cuda:0')
+    
+            with torch.no_grad():
+                output = model.forward(input_ids, alignments)
+            _, preds = torch.topk(output, k=1, dim=-1)
+    
+            batch_correct = torch.eq(labels.squeeze(), preds.squeeze()).sum().item()
+            num_correct += batch_correct
+            total_num += labels.shape[-1]
+    
+        return num_correct / total_num
+    
+    elif metric == 'ner_f1':
+        int2tag = ['O', 'B-PER', 'I-PER', 'B-ORG', 'I-ORG', 'B-LOC', 'I-LOC']
+        true = []
+        predicted = []
+        
+        for i in range(0, len(data), bsz):
+            if i + bsz > len(data):
+                batch_data = data[i:]
+            else:
+                batch_data = data[i:i + bsz]
+            input_ids, alignments, labels = batchify(batch_data, pad_idx)
+    
+            input_ids = input_ids.to('cuda:0')
+            labels = labels.to('cuda:0')
+    
+            with torch.no_grad():
+                output = model.forward(input_ids, alignments)
+            _, preds = torch.topk(output, k=1, dim=-1)
+            
+            true.append([int2tag[x] for x in labels])
+            predicted.append([int2tag[x] for x in preds])
+            
+        return f1_score(true, predicted)
+    
+    else:
+        raise Exception(f'Evaluation metric not recognized: {metric}')
 
 
 def majority_label_baseline(text_data, label_set):
@@ -340,10 +370,10 @@ def pos(
             for lg in args.langs
         }
 
-        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels)
-        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels)
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
         test_data = {
-            lg: whitespace_to_sentencepiece(tokenizer, data, pos_labels)
+            lg: whitespace_to_sentencepiece(tokenizer, data, pos_labels, max_seq_length=args.max_seq_length)
             for lg, data in test_text_data.items()
         }
 
@@ -367,9 +397,9 @@ def pos(
         print(f"per word majority baseline: {round(per_word_baseline, 2)}")
 
         # preprocessing can take in a hidden layer id if we want to probe inside model
-        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels)
-        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels)
-        test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, pos_labels)
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, pos_labels, max_seq_length=args.max_seq_length)
 
         scores = []
 
@@ -418,6 +448,7 @@ def pos(
                 criterion,
                 optimizer,
                 tokenizer.pad_token_id,
+                args.eval_metric,
                 bsz=tagger_bsz,
                 gradient_accumulation=gradient_accumulation,
                 epochs=max_epochs,
@@ -443,13 +474,13 @@ def pos(
         # evaluate classificaiton model
         if do_zero_shot:
             for lg in args.langs:
-                acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz)
+                acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz, metric=args.eval_metric)
                 acc = acc * 100
                 scores[lg].append(acc)
                 print(f"{lg} accuracy: {round(acc, 2)}")
             print("----")
         else:
-            acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz)
+            acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz, metric=args.eval_metric)
             acc = acc * 100
             scores.append(acc)
             print(f"accuracy: {round(acc, 2)}")
@@ -467,16 +498,16 @@ def pos(
             model.eval()
 
             if do_zero_shot:
-                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels)
-                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
                 test_data = {
-                    lg: whitespace_to_sentencepiece(tokenizer, data, pos_labels)
+                    lg: whitespace_to_sentencepiece(tokenizer, data, pos_labels, max_seq_length=args.max_seq_length)
                     for lg, data in test_text_data.items()
                 }
             else:
-                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels)
-                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels)
-                test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, pos_labels)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, pos_labels, max_seq_length=args.max_seq_length)
 
     print("all trials finished")
     mean_epochs, epochs_stdev = mean_stdev(epochs)
@@ -588,10 +619,10 @@ def ner(
             for lg in args.langs
         }
         
-        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels)
-        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels)
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels, max_seq_length=args.max_seq_length)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels, max_seq_length=args.max_seq_length)
         test_data = {
-            lg: whitespace_to_sentencepiece(tokenizer, data, ner_labels)
+            lg: whitespace_to_sentencepiece(tokenizer, data, ner_labels, max_seq_length=args.max_seq_length)
             for lg, data in test_text_data.items()
         }
 
@@ -615,9 +646,9 @@ def ner(
         print(f"per word majority baseline: {round(per_word_baseline, 2)}")
         
         # preprocessing can take in a hidden layer id if we want to probe inside model
-        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels)
-        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels)
-        test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, ner_labels)
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels, max_seq_length=args.max_seq_length)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels, max_seq_length=args.max_seq_length)
+        test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, ner_labels, max_seq_length=args.max_seq_length)
 
         scores = []
 
@@ -667,6 +698,7 @@ def ner(
                 criterion,
                 optimizer,
                 tokenizer.pad_token_id,
+                args.eval_metric,
                 bsz=tagger_bsz,
                 gradient_accumulation=gradient_accumulation,
                 epochs=max_epochs,
@@ -692,16 +724,16 @@ def ner(
         # evaluate classificaiton model
         if do_zero_shot:
             for lg in args.langs:
-                acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz)
-                acc = acc * 100
-                scores[lg].append(acc)
-                print(f"{lg} accuracy: {round(acc, 2)}")
+                score = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz, metric=args.eval_metric)
+                score = score * 100
+                scores[lg].append(score)
+                print(f"{lg} score ({args.eval_metric}): {round(score, 2)}")
             print("----")
         else:
-            acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz)
-            acc = acc * 100
-            scores.append(acc)
-            print(f"accuracy: {round(acc, 2)}")
+            score = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz, metric=args.eval_metric)
+            score = score * 100
+            scores.append(score)
+            print(f"score ({args.eval_metric}): {round(score, 2)}")
             print("----")
 
         # reinitalize the model for each trial if using randomly initialized encoder
@@ -716,16 +748,16 @@ def ner(
             model.eval()
             
             if do_zero_shot:
-                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels)
-                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels, max_seq_length=args.max_seq_length)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels, max_seq_length=args.max_seq_length)
                 test_data = {
-                    lg: whitespace_to_sentencepiece(tokenizer, data, ner_labels)
+                    lg: whitespace_to_sentencepiece(tokenizer, data, ner_labels, max_seq_length=args.max_seq_length)
                     for lg, data in test_text_data.items()
                 }
             else:
-                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels)
-                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels)
-                test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, ner_labels)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels, max_seq_length=args.max_seq_length)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels, max_seq_length=args.max_seq_length)
+                test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, ner_labels, max_seq_length=args.max_seq_length)
 
     print("all trials finished")
     mean_epochs, epochs_stdev = mean_stdev(epochs)
@@ -823,10 +855,14 @@ if __name__ == "__main__":
         args.max_train_examples = math.inf
 
     args.tokenizer_path = getattr(args, 'tokenizer_path', None)
+    
+    args.max_seq_length = getattr(args, 'max_seq_length', 512)
+    
+    args.eval_metric = getattr(args, 'eval_metric', 'acc')
 
     # ensure that given lang matches given task
-    for lang in args.langs:
-        assert lang in _lang_choices[args.task]
+    #for lang in args.langs:
+    #    assert lang in _lang_choices[args.task]
 
     print(f"Pytorch version: {torch.__version__}")
     print(f"Pytorch CUDA version: {torch.version.cuda}")
