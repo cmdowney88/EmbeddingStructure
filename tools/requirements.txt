@@ -1,0 +1,8 @@
+datasets==2.11.*
+numpy==1.24.*
+protobuf==3.20.*
+PyYAML==6.0
+transformers[torch]>=4.20.0
+tokenizers==0.13.*
+sentencepiece
+seqeval=1.2.2
