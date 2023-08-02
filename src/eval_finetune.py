@@ -242,6 +242,12 @@ def train_model(
         print(f"num_epochs_to_convergence: {num_epochs_to_convergence}", file=fout)
         print("resume_from_epoch: null", file=fout)
 
+    # Remove the "latest model", if it exists (only keep best)
+    try:
+        os.remove(latest_model_path)
+    except:
+        pass
+
     # return model, number of training epochs for best ckpt
     return model, num_epochs_to_convergence
 
