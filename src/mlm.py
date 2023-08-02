@@ -220,6 +220,7 @@ if __name__ == "__main__":
     args.training_epochs = getattr(args, 'training_epochs', 1.0)
     args.training_steps = getattr(args, 'training_steps', -1)
     args.logging_steps = getattr(args, 'logging_steps', 500)
+    args.max_grad_norm = getattr(args, 'max_grad_norm', 1.0)
 
     # initialize trainer class with training configs
     training_args = TrainingArguments(
@@ -230,6 +231,7 @@ if __name__ == "__main__":
         max_steps=args.training_steps,
         learning_rate=float(args.learning_rate),
         per_device_train_batch_size=args.train_batch_size,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
         logging_steps=args.logging_steps,
         evaluation_strategy=args.eval_strategy,
         per_device_eval_batch_size=args.eval_batch_size,
@@ -243,10 +245,10 @@ if __name__ == "__main__":
         lr_scheduler_type=args.lr_scheduler_type,
         warmup_ratio=float(args.warmup_ratio),
         warmup_steps=args.warmup_steps,
+        max_grad_norm=args.max_grad_norm,
         auto_find_batch_size=args.auto_find_batch_size,
         group_by_length=args.group_by_length,
         gradient_checkpointing=args.gradient_checkpointing,
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
         fp16=args.fp16,
         fsdp=args.torch_distributed_training,
         full_determinism=args.full_determinism
@@ -289,6 +291,7 @@ if __name__ == "__main__":
 
     best_checkpoint_path = os.path.join(args.checkpoints_directory, 'best-checkpoint')
     trainer.save_model(best_checkpoint_path)
+    trainer.save_state()
 
     # evaluate model
     trainer.evaluate()
