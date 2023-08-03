@@ -151,6 +151,7 @@ def train_model(
     pad_idx,
     bsz=1,
     gradient_accumulation=1,
+    max_grad_norm=1.0,
     epochs=1,
     max_train_examples=math.inf,
     eval_every=2,
@@ -205,9 +206,12 @@ def train_model(
 
             output = model.forward(input_ids, alignments)
             loss = criterion(output, labels)
+            if torch.isnan(loss):
+                raise RuntimeError(f"NaN loss detected: epoch {epoch_id + 1}")
             loss.backward()
             accumulation_counter += 1
             if accumulation_counter >= gradient_accumulation:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
                 optimizer.step()
                 optimizer.zero_grad()
                 accumulation_counter = 0
@@ -451,6 +455,7 @@ def pos(
                 tokenizer.pad_token_id,
                 bsz=tagger_bsz,
                 gradient_accumulation=gradient_accumulation,
+                max_grad_norm=args.max_grad_norm,
                 epochs=max_epochs,
                 max_train_examples=max_train_examples,
                 patience=args.patience,
@@ -604,8 +609,8 @@ if __name__ == "__main__":
         args.max_train_examples = math.inf
 
     args.tokenizer_path = getattr(args, 'tokenizer_path', None)
-
     args.max_seq_length = getattr(args, 'max_seq_length', 512)
+    args.max_grad_norm = getattr(args, 'max_grad_norm', 1.0)
 
     # ensure that given lang matches given task
     #for lang in args.langs:
