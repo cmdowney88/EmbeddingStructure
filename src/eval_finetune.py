@@ -218,7 +218,7 @@ def train_model(
                 accumulation_counter = 0
 
         if ((epoch_id + 1) % eval_every) == 0:
-            valid_acc = evaluate_model(model, valid_data, pad_idx, bsz=bsz)
+            valid_acc = evaluate_model(model, valid_data, pad_idx, bsz=bsz, metric=eval_metric)
             model.train()
             torch.save(model.state_dict(), latest_model_path)
             with open(checkpoint_control_path, 'w') as fout:
