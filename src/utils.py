@@ -37,11 +37,11 @@ _task_choices = ['pos', 'ppl', 'ner']
 
 _label_spaces = {
     #pos documentation: https://universaldependencies.org/u/pos/index.html
-    'UPOS': ['ADJ', 'ADP', 'ADV', 'AUX', 'CCONJ', 'DET', 'INTJ', 'NOUN', \
+    'pos': ['ADJ', 'ADP', 'ADV', 'AUX', 'CCONJ', 'DET', 'INTJ', 'NOUN', \
         'NUM', 'PART', 'PRON', 'PROPN', 'PUNCT', 'SCONJ', 'SYM', 'VERB',\
         'X'],
     #ner documentation: https://huggingface.co/datasets/wikiann
-    'NER': [x for x in range(7)]
+    'ner': [x for x in range(7)]
     }
 
 _xlmr_special_tokens = ['<s>', '</s>', '<unk>', '<pad>', '<mask>']
@@ -85,7 +85,7 @@ def load_hf_model(model_type, model_name, task='ppl', random_weights=False, toke
     return model, tokenizer
 
 
-def _load_word_level_ud(file_path, task):
+def _load_word_level_ud(file_path):
     dataset = []
 
     example_sent = []
@@ -110,8 +110,7 @@ def _load_word_level_ud(file_path, task):
                 # if idx == 1: assert len(example) == 0
 
                 #using upos for part of speech task instead of xpos
-                if task == 'pos':
-                    label = upos
+                label = upos
 
                 example_sent.append(word)
                 example_labels.append(label)
@@ -136,7 +135,7 @@ def _load_ud_text(file_path):
     return dataset
 
 
-def load_ud_splits(data_path, lang, splits=['train', 'dev', 'test'], task='pos'):
+def load_ud_splits(data_path, lang, splits=['train', 'dev', 'test']):
     ud_files = os.listdir(data_path)
     split_data = {}
     for split_name in splits:
@@ -144,10 +143,7 @@ def load_ud_splits(data_path, lang, splits=['train', 'dev', 'test'], task='pos')
         assert len(split_file) == 1
         split_file = split_file[0]
         split_path = os.path.join(data_path, split_file)
-        if task == 'ppl':
-            split_data[split_name] = _load_ud_text(split_path)
-        else:
-            split_data[split_name] = _load_word_level_ud(split_path, task)
+        split_data[split_name] = _load_word_level_ud(split_path)
 
     return split_data if len(splits) > 1 else split_data[splits[0]]
 
