@@ -1,3 +1,4 @@
+import json
 import os
 import torch
 
@@ -28,15 +29,19 @@ _lang_choices = {
     'pl', 'uk', 'nl', 'sv', 'pt', 'sr', 'hu', 'ca', 'cs', 'fi', 'ar',\
     'ko', 'fa', 'no', 'vi', 'he', 'id', 'ro', 'tr', 'bg', 'et', 'ms',\
     'da', 'sk', 'hr', 'el', 'lt', 'sl', 'th', 'hi', 'lv', 'tl'],
+    'ner': ['et', 'fi', 'fiu-vro', 'hu', 'koi', 'komi', 'kv', 'mari', 'mdf', 
+            'mhr', 'mrj', 'myv', 'no', 'ru', 'se', 'udm', 'vep']
 }
 
-_task_choices = ['pos', 'ppl']
+_task_choices = ['pos', 'ppl', 'ner']
 
 _label_spaces = {
     #pos documentation: https://universaldependencies.org/u/pos/index.html
     'UPOS': ['ADJ', 'ADP', 'ADV', 'AUX', 'CCONJ', 'DET', 'INTJ', 'NOUN', \
         'NUM', 'PART', 'PRON', 'PROPN', 'PUNCT', 'SCONJ', 'SYM', 'VERB',\
         'X'],
+    #ner documentation: https://huggingface.co/datasets/wikiann
+    'NER': [x for x in range(7)]
     }
 
 _xlmr_special_tokens = ['<s>', '</s>', '<unk>', '<pad>', '<mask>']
@@ -143,6 +148,33 @@ def load_ud_splits(data_path, lang, splits=['train', 'dev', 'test'], task='pos')
             split_data[split_name] = _load_ud_text(split_path)
         else:
             split_data[split_name] = _load_word_level_ud(split_path, task)
+
+    return split_data if len(splits) > 1 else split_data[splits[0]]
+
+def _load_ner_data(file_path):
+    # Return tokens and labels
+    dataset = []
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        
+    for instance in data:
+        if len(instance['tokens']) > 0:
+            dataset.append((instance['tokens'], instance['ner_tags']))
+        
+    return dataset
+
+
+def load_ner_splits(data_path, lang, splits=['train', 'dev', 'test']):
+    ner_files = os.listdir(data_path)
+    split_data = {}
+    for split_name in splits:
+        split_file = [x for x in ner_files if f'_{lang}_' in x and f'_{split_name}' in x]
+        assert len(split_file) == 1
+        split_file = split_file[0]
+        split_path = os.path.join(data_path, split_file)
+        
+        split_data[split_name] = _load_ner_data(split_path)
 
     return split_data if len(splits) > 1 else split_data[splits[0]]
 

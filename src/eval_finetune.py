@@ -11,12 +11,12 @@ import torch
 import yaml
 from torch.nn import functional as F
 from tqdm import tqdm
+from seqeval.metrics import f1_score
 
 from utils import (
     MODEL_CLASSES, _consolidate_features, _label_spaces, _lang_choices, _model_names, _task_choices,
-    load_hf_model, load_ud_splits
+    load_hf_model, load_ud_splits, load_ner_splits
 )
-
 
 class Tagger(torch.nn.Module):
     """
@@ -47,7 +47,7 @@ class Tagger(torch.nn.Module):
         return output
 
 
-def preprocess_ud_word_level(tokenizer, dataset, label_space, max_seq_length=512, layer_id=-1):
+def whitespace_to_sentencepiece(tokenizer, dataset, label_space, max_seq_length=512, layer_id=-1):
     """
     Pre-process the text data from a UD dataset using a huggingface tokenizer, keeping track of the
     mapping between word and subword tokenizations. Break up sentences in the dataset that are
@@ -149,6 +149,7 @@ def train_model(
     criterion,
     optimizer,
     pad_idx,
+    eval_metric,
     bsz=1,
     gradient_accumulation=1,
     max_grad_norm=1.0,
@@ -163,6 +164,7 @@ def train_model(
 
     best_model_path = os.path.join(model_dir, "best_model.pt")
     latest_model_path = os.path.join(model_dir, "latest_model.pt")
+    checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
 
     max_valid_acc = 0
     patience_step = 0
@@ -173,7 +175,6 @@ def train_model(
         random.shuffle(data)
         data = data[:total_examples]
 
-    checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
     checkpoint_control_exists = os.path.isfile(checkpoint_control_path)
     if checkpoint_control_exists:
         with open(checkpoint_control_path, 'r') as fin:
@@ -219,7 +220,6 @@ def train_model(
         if ((epoch_id + 1) % eval_every) == 0:
             valid_acc = evaluate_model(model, valid_data, pad_idx, bsz=bsz)
             model.train()
-
             torch.save(model.state_dict(), latest_model_path)
             with open(checkpoint_control_path, 'w') as fout:
                 print("training_complete: False", file=fout)
@@ -256,32 +256,60 @@ def train_model(
     return model, num_epochs_to_convergence
 
 
-def evaluate_model(model, data, pad_idx, bsz=1):
+def evaluate_model(model, data, pad_idx, bsz=1, metric='acc'):
     model.eval()
     model.to('cuda:0')
-
-    num_correct = 0.
-    total_num = 0.
-
-    for i in range(0, len(data), bsz):
-        if i + bsz > len(data):
-            batch_data = data[i:]
-        else:
-            batch_data = data[i:i + bsz]
-        input_ids, alignments, labels = batchify(batch_data, pad_idx)
-
-        input_ids = input_ids.to('cuda:0')
-        labels = labels.to('cuda:0')
-
-        with torch.no_grad():
-            output = model.forward(input_ids, alignments)
-        _, preds = torch.topk(output, k=1, dim=-1)
-
-        batch_correct = torch.eq(labels.squeeze(), preds.squeeze()).sum().item()
-        num_correct += batch_correct
-        total_num += labels.shape[-1]
-
-    return num_correct / total_num
+    
+    if metric == 'acc':
+        num_correct = 0.
+        total_num = 0.
+    
+        for i in range(0, len(data), bsz):
+            if i + bsz > len(data):
+                batch_data = data[i:]
+            else:
+                batch_data = data[i:i + bsz]
+            input_ids, alignments, labels = batchify(batch_data, pad_idx)
+    
+            input_ids = input_ids.to('cuda:0')
+            labels = labels.to('cuda:0')
+    
+            with torch.no_grad():
+                output = model.forward(input_ids, alignments)
+            _, preds = torch.topk(output, k=1, dim=-1)
+    
+            batch_correct = torch.eq(labels.squeeze(), preds.squeeze()).sum().item()
+            num_correct += batch_correct
+            total_num += labels.shape[-1]
+    
+        return num_correct / total_num
+    
+    elif metric == 'ner_f1':
+        int2tag = ['O', 'B-PER', 'I-PER', 'B-ORG', 'I-ORG', 'B-LOC', 'I-LOC']
+        true = []
+        predicted = []
+        
+        for i in range(0, len(data), bsz):
+            if i + bsz > len(data):
+                batch_data = data[i:]
+            else:
+                batch_data = data[i:i + bsz]
+            input_ids, alignments, labels = batchify(batch_data, pad_idx)
+    
+            input_ids = input_ids.to('cuda:0')
+            labels = labels.to('cuda:0')
+    
+            with torch.no_grad():
+                output = model.forward(input_ids, alignments)
+            _, preds = torch.topk(output, k=1, dim=-1)
+            
+            true.append([int2tag[x] for x in labels])
+            predicted.append([int2tag[x] for x in preds])
+            
+        return f1_score(true, predicted)
+    
+    else:
+        raise Exception(f'Evaluation metric not recognized: {metric}')
 
 
 def majority_label_baseline(text_data, label_set):
@@ -375,10 +403,10 @@ def pos(
             for lg in args.langs
         }
 
-        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
-        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
         test_data = {
-            lg: preprocess_ud_word_level(tokenizer, data, pos_labels, max_seq_length=args.max_seq_length)
+            lg: whitespace_to_sentencepiece(tokenizer, data, pos_labels, max_seq_length=args.max_seq_length)
             for lg, data in test_text_data.items()
         }
 
@@ -402,9 +430,9 @@ def pos(
         print(f"per word majority baseline: {round(per_word_baseline, 2)}")
 
         # preprocessing can take in a hidden layer id if we want to probe inside model
-        train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
-        valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
-        test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
+        test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, pos_labels, max_seq_length=args.max_seq_length)
 
         scores = []
 
@@ -453,6 +481,7 @@ def pos(
                 criterion,
                 optimizer,
                 tokenizer.pad_token_id,
+                args.eval_metric,
                 bsz=tagger_bsz,
                 gradient_accumulation=gradient_accumulation,
                 max_grad_norm=args.max_grad_norm,
@@ -479,13 +508,13 @@ def pos(
         # evaluate classificaiton model
         if do_zero_shot:
             for lg in args.langs:
-                acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz)
+                acc = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz, metric=args.eval_metric)
                 acc = acc * 100
                 scores[lg].append(acc)
                 print(f"{lg} accuracy: {round(acc, 2)}")
             print("----")
         else:
-            acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz)
+            acc = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz, metric=args.eval_metric)
             acc = acc * 100
             scores.append(acc)
             print(f"accuracy: {round(acc, 2)}")
@@ -503,16 +532,16 @@ def pos(
             model.eval()
 
             if do_zero_shot:
-                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
-                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
                 test_data = {
-                    lg: preprocess_ud_word_level(tokenizer, data, pos_labels, max_seq_length=args.max_seq_length)
+                    lg: whitespace_to_sentencepiece(tokenizer, data, pos_labels, max_seq_length=args.max_seq_length)
                     for lg, data in test_text_data.items()
                 }
             else:
-                train_data = preprocess_ud_word_level(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
-                valid_data = preprocess_ud_word_level(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
-                test_data = preprocess_ud_word_level(tokenizer, test_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, pos_labels, max_seq_length=args.max_seq_length)
+                test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, pos_labels, max_seq_length=args.max_seq_length)
 
     print("all trials finished")
     mean_epochs, epochs_stdev = mean_stdev(epochs)
@@ -585,6 +614,257 @@ def set_up_pos_zero_shot(args):
         max_epochs=args.epochs,
         max_train_examples=args.max_train_examples
     )
+    
+# task expects .json files for train and validation for the given language in
+# the data_path dir
+def ner(
+    args,
+    model,
+    tokenizer,
+    data_path,
+    ckpt_path,
+    lang='en',
+    max_epochs=50,
+    max_train_examples=math.inf
+):
+    """
+    Conduct fine-tuning and evaluation for an NER task. Fine-tune the model on four different
+    random seeds per training set. If `args.zero_shot_transfer` is true and
+    `args.transfer_source` is specified, conduct zero-shot transfer. Zero-shot transfer assumes that
+    only test set(s) are available for the language(s) being evaluated. If doing zero-shot,
+    fine-tune the model on the training/dev sets available for `args.transfer_source`, then loop
+    over the specified language test sets at eval time
+    """
+    ner_labels = _label_spaces['NER']
+    is_zero_shot = getattr(args, 'zero_shot_transfer', False)
+    has_transfer_source = getattr(args, 'transfer_source', False)
+    do_zero_shot = is_zero_shot and has_transfer_source
+
+    # If doing zero-shot transfer, load the train and dev sets for `args.transfer_source` and load
+    # the test set for each of the languages in `args.langs`. Pre-process the WikiAnn data
+    if do_zero_shot:
+        train_valid_data = load_ner_splits(
+            data_path, args.transfer_source, splits=['train', 'dev']
+        )
+        train_text_data = train_valid_data['train']
+        valid_text_data = train_valid_data['dev']
+        test_text_data = {
+            lg: load_ner_splits(data_path, lg, splits=['test'])
+            for lg in args.langs
+        }
+        
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels, max_seq_length=args.max_seq_length)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels, max_seq_length=args.max_seq_length)
+        test_data = {
+            lg: whitespace_to_sentencepiece(tokenizer, data, ner_labels, max_seq_length=args.max_seq_length)
+            for lg, data in test_text_data.items()
+        }
+
+        scores = defaultdict(list)
+    # If not doing zero-shot transfer, pre-process the train, dev, and test sets for the language
+    # in question. Also get and log the majority label baselines
+    else:
+        print("########")
+        print(f"Beginning NER evaluation for {lang}")
+        # load NER train and eval data for probing on given langauge
+        ner_splits = load_ner_splits(data_path, lang)
+        train_text_data, valid_text_data, test_text_data = [
+            ner_splits[x] for x in ['train', 'dev', 'test']
+        ]
+
+        # Get majority sense baseline
+        majority_baseline, words = majority_label_baseline(train_text_data, ner_labels)
+        print(f"majority label baseline: {round(majority_baseline, 2)}")
+
+        per_word_baseline = per_word_majority_baseline(test_text_data, words, ner_labels)
+        print(f"per word majority baseline: {round(per_word_baseline, 2)}")
+        
+        # preprocessing can take in a hidden layer id if we want to probe inside model
+        train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels, max_seq_length=args.max_seq_length)
+        valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels, max_seq_length=args.max_seq_length)
+        test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, ner_labels, max_seq_length=args.max_seq_length)
+
+        scores = []
+
+    random_seeds = [1, 2, 3, 4]
+    epochs = []
+    
+    for rand_x in random_seeds:
+        # set random seeds for model init, data shuffling
+        torch.cuda.manual_seed(rand_x)
+        torch.cuda.manual_seed_all(rand_x)
+        np.random.seed(rand_x)
+        random.seed(rand_x)
+        
+        # look for a control file to determine if a trial has already been done, e.g. by a
+        # submitted job that was pre-empted before completing all trials
+        lang_name = args.transfer_source if do_zero_shot else lang
+        model_dir = os.path.join(ckpt_path, lang_name, str(rand_x))
+        os.makedirs(model_dir, exist_ok=True)
+        checkpoint_control_path = os.path.join(model_dir, "checkpoint_control.yml")
+        checkpoint_control_exists = os.path.isfile(checkpoint_control_path)
+        if checkpoint_control_exists:
+            with open(checkpoint_control_path, 'r') as fin:
+                control_dict = yaml.load(fin, Loader=yaml.Loader)
+                training_complete = control_dict['training_complete']
+        else:
+            control_dict = None
+            training_complete = False
+
+        # create probe model
+        tagger = Tagger(model, len(ner_labels))
+        tagger_bsz = args.batch_size
+
+        # only do training if we can't retrieve the existing checkpoint
+        if not training_complete:
+            # load criterion and optimizer
+            tagger_lr = 0.000005
+            gradient_accumulation = getattr(args, 'gradient_accumulation', 1)
+
+            criterion = torch.nn.CrossEntropyLoss(reduction='mean')
+            optimizer = torch.optim.Adam(tagger.parameters(), lr=tagger_lr)
+
+            # train classification model
+            tagger, num_epochs = train_model(
+                tagger,
+                train_data,
+                valid_data,
+                criterion,
+                optimizer,
+                tokenizer.pad_token_id,
+                args.eval_metric,
+                bsz=tagger_bsz,
+                gradient_accumulation=gradient_accumulation,
+                epochs=max_epochs,
+                max_train_examples=max_train_examples,
+                patience=args.patience,
+                model_dir=model_dir
+            )
+        else:
+            print(
+                f"{lang_name} random seed {rand_x} previously trained; reading checkpoint", file=sys.stderr
+            )
+            num_epochs = control_dict['num_epochs_to_convergence']
+
+        epochs.append(num_epochs * 1.0)
+        
+        # load best checkpoint for model state
+        best_model_path = os.path.join(model_dir, "best_model.pt")
+        tagger.load_state_dict(torch.load(best_model_path))
+
+        print(f"random seed: {rand_x}")
+        print(f"num epochs: {num_epochs}")
+
+        # evaluate classificaiton model
+        if do_zero_shot:
+            for lg in args.langs:
+                score = evaluate_model(tagger, test_data[lg], tokenizer.pad_token_id, bsz=tagger_bsz, metric=args.eval_metric)
+                score = score * 100
+                scores[lg].append(score)
+                print(f"{lg} score ({args.eval_metric}): {round(score, 2)}")
+            print("----")
+        else:
+            score = evaluate_model(tagger, test_data, tokenizer.pad_token_id, bsz=tagger_bsz, metric=args.eval_metric)
+            score = score * 100
+            scores.append(score)
+            print(f"score ({args.eval_metric}): {round(score, 2)}")
+            print("----")
+
+        # reinitalize the model for each trial if using randomly initialized encoder
+        if args.random_weights:
+            model, tokenizer = load_hf_model(
+                args.model_class,
+                args.model_name,
+                task=args.task,
+                random_weights=args.random_weights
+            )
+            model.cuda()
+            model.eval()
+            
+            if do_zero_shot:
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels, max_seq_length=args.max_seq_length)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels, max_seq_length=args.max_seq_length)
+                test_data = {
+                    lg: whitespace_to_sentencepiece(tokenizer, data, ner_labels, max_seq_length=args.max_seq_length)
+                    for lg, data in test_text_data.items()
+                }
+            else:
+                train_data = whitespace_to_sentencepiece(tokenizer, train_text_data, ner_labels, max_seq_length=args.max_seq_length)
+                valid_data = whitespace_to_sentencepiece(tokenizer, valid_text_data, ner_labels, max_seq_length=args.max_seq_length)
+                test_data = whitespace_to_sentencepiece(tokenizer, test_text_data, ner_labels, max_seq_length=args.max_seq_length)
+
+    print("all trials finished")
+    mean_epochs, epochs_stdev = mean_stdev(epochs)
+    print(f"mean epochs: {round(mean_epochs, 2)}")
+
+    if do_zero_shot:
+        for lg in args.langs:
+            mean_score, score_stdev = mean_stdev(scores[lg])
+            print(f"{lg} mean score: {round(mean_score, 2)}")
+            print(f"{lg} standard deviation: {round(score_stdev, 2)}")
+    else:
+        mean_score, score_stdev = mean_stdev(scores)
+        print(f"mean score: {round(mean_score, 2)}")
+        print(f"standard deviation: {round(score_stdev, 2)}")
+
+    
+def set_up_ner(args):
+    """
+    For each language being evaluated, set up NER task by loading a huggingface
+    model/tokenizer then calling the `ner` function
+    """
+    # Loop over languages to eval
+    for lang in args.langs:
+        # load huggingface model, tokenizer
+        model, tokenizer = load_hf_model(
+            args.model_class,
+            args.model_name,
+            task=args.task,
+            random_weights=args.random_weights,
+            tokenizer_path=args.tokenizer_path
+        )
+        
+        model.cuda() 
+        model.eval()
+        
+        # Do ner task
+        ner(
+            args,
+            model,
+            tokenizer,
+            args.dataset_path,
+            args.checkpoint_path,
+            lang=lang,
+            max_epochs=args.epochs,
+            max_train_examples=args.max_train_examples
+        )
+    
+def set_up_ner_zero_shot(args):
+    """
+    Set up NER task by loading a huggingface model/tokenizer then calling the `ner`
+    function. Unlike `set_up_ner`, the loop over evaluation languages occurs inside the `ner`
+    function in the zero-shot case, since the model is fine-tuned only on `transfer-source`
+    """
+    # load huggingface model, tokenizer
+    model, tokenizer = load_hf_model(
+        args.model_class,
+        args.model_name,
+        task=args.task,
+        random_weights=args.random_weights,
+        tokenizer_path=args.tokenizer_path
+    )
+    model.cuda()
+    model.eval()
+    # Do pos task
+    ner(
+        args,
+        model,
+        tokenizer,
+        args.dataset_path,
+        args.checkpoint_path,
+        max_epochs=args.epochs,
+        max_train_examples=args.max_train_examples
+    )
 
 
 if __name__ == "__main__":
@@ -604,12 +884,11 @@ if __name__ == "__main__":
 
     os.makedirs(args.checkpoint_path, exist_ok=True)
 
-    # set max_train_examples to infinity it is is null or absent in config
-    if not getattr(args, 'max_train_examples', False):
-        args.max_train_examples = math.inf
-
+    # set defaults for optional parameters
+    args.max_train_examples = getattr(args, 'max_train_examples', math.inf)
     args.tokenizer_path = getattr(args, 'tokenizer_path', None)
     args.max_seq_length = getattr(args, 'max_seq_length', 512)
+    args.eval_metric = getattr(args, 'eval_metric', 'acc')
     args.max_grad_norm = getattr(args, 'max_grad_norm', 1.0)
 
     # ensure that given lang matches given task
@@ -629,16 +908,27 @@ if __name__ == "__main__":
     random.seed(args.random_seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-
-    # Normal POS eval assumes a train, dev, and test set for each language being evaluated.
-    # Zero-shot POS assumes a test set is available for each language in question, and that
-    # train/dev sets are availalble for `args.transfer_source`
-    if args.zero_shot_transfer and args.transfer_source:
-        print(
-            f"Doing zero-shot transfer from source {args.transfer_source} to languages {', '.join(args.langs)}"
-        )
-        set_up_pos_zero_shot(args)
+    
+    if args.task == 'ner':
+        if args.zero_shot_transfer and args.transfer_source:
+            print(
+                f"Doing zero-shot transfer from source {args.transfer_source} to languages {', '.join(args.langs)}"
+            )
+            set_up_ner_zero_shot(args)
+        else:
+            set_up_ner(args)
+    elif args.task == 'pos':
+        # Normal POS eval assumes a train, dev, and test set for each language being evaluated.
+        # Zero-shot POS assumes a test set is available for each language in question, and that
+        # train/dev sets are availalble for `args.transfer_source`
+        if args.zero_shot_transfer and args.transfer_source:
+            print(
+                f"Doing zero-shot transfer from source {args.transfer_source} to languages {', '.join(args.langs)}"
+            )
+            set_up_pos_zero_shot(args)
+        else:
+            set_up_pos(args)
     else:
-        set_up_pos(args)
+        raise Exception(f'Task not recognized: {args.task}')
 
 #EOF
