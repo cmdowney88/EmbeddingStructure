@@ -1,0 +1,48 @@
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+Doing zero-shot transfer from source uralic to languages kpv, krl, mdf, olo, sms
+random seed: 1
+num epochs: 62
+kpv accuracy: 68.32
+krl accuracy: 86.46
+mdf accuracy: 70.89
+olo accuracy: 82.86
+sms accuracy: 52.94
+----
+random seed: 2
+num epochs: 64
+kpv accuracy: 68.58
+krl accuracy: 86.1
+mdf accuracy: 70.82
+olo accuracy: 83.94
+sms accuracy: 54.25
+----
+random seed: 3
+num epochs: 64
+kpv accuracy: 68.58
+krl accuracy: 86.49
+mdf accuracy: 71.01
+olo accuracy: 83.27
+sms accuracy: 52.76
+----
+random seed: 4
+num epochs: 60
+kpv accuracy: 68.46
+krl accuracy: 86.04
+mdf accuracy: 71.43
+olo accuracy: 84.01
+sms accuracy: 53.63
+----
+all trials finished
+mean epochs: 62.5
+kpv mean score: 68.48
+kpv standard deviation: 0.11
+krl mean score: 86.27
+krl standard deviation: 0.2
+mdf mean score: 71.04
+mdf standard deviation: 0.24
+olo mean score: 83.52
+olo standard deviation: 0.48
+sms mean score: 53.39
+sms standard deviation: 0.59

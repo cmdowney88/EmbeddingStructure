@@ -152,6 +152,7 @@ def train_model(
     eval_metric,
     bsz=1,
     gradient_accumulation=1,
+    max_grad_norm=1.0,
     epochs=1,
     max_train_examples=math.inf,
     eval_every=2,
@@ -188,9 +189,12 @@ def train_model(
 
             output = model.forward(input_ids, alignments)
             loss = criterion(output, labels)
+            if torch.isnan(loss):
+                raise RuntimeError(f"NaN loss detected: epoch {epoch_id + 1}")
             loss.backward()
             accumulation_counter += 1
             if accumulation_counter >= gradient_accumulation:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
                 optimizer.step()
                 optimizer.zero_grad()
                 accumulation_counter = 0
@@ -218,6 +222,12 @@ def train_model(
     with open(checkpoint_control_path, 'w') as fout:
         print("training_complete: True", file=fout)
         print(f"num_epochs_to_convergence: {num_epochs_to_convergence}", file=fout)
+
+    # Remove the "latest model", if it exists (only keep best)
+    try:
+        os.remove(latest_model_path)
+    except:
+        pass
 
     # return model, number of training epochs for best ckpt
     return model, num_epochs_to_convergence
@@ -451,6 +461,7 @@ def pos(
                 args.eval_metric,
                 bsz=tagger_bsz,
                 gradient_accumulation=gradient_accumulation,
+                max_grad_norm=args.max_grad_norm,
                 epochs=max_epochs,
                 max_train_examples=max_train_examples,
                 patience=args.patience,
@@ -850,15 +861,12 @@ if __name__ == "__main__":
 
     os.makedirs(args.checkpoint_path, exist_ok=True)
 
-    # set max_train_examples to infinity it is is null or absent in config
-    if not getattr(args, 'max_train_examples', False):
-        args.max_train_examples = math.inf
-
+    # set defaults for optional parameters
+    args.max_train_examples = getattr(args, 'max_train_examples', math.inf)
     args.tokenizer_path = getattr(args, 'tokenizer_path', None)
-    
     args.max_seq_length = getattr(args, 'max_seq_length', 512)
-    
     args.eval_metric = getattr(args, 'eval_metric', 'acc')
+    args.max_grad_norm = getattr(args, 'max_grad_norm', 1.0)
 
     # ensure that given lang matches given task
     #for lang in args.langs:

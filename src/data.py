@@ -4,10 +4,10 @@ import yaml
 from typing import Iterator
 
 from torch import Tensor
-from torch.utils.data.dataset import IterableDataset
+from torch.utils.data.dataset import Dataset
 
 
-class ShardedTextDataset(IterableDataset):
+class ShardedTextDataset(Dataset):
     def __init__(
         self,
         datadir: str,
@@ -18,7 +18,7 @@ class ShardedTextDataset(IterableDataset):
         sort_by_length: bool = False,
         saved_state: dict = None,
         reset_indices: bool = False
-    ) -> IterableDataset:
+    ) -> Dataset:
         """
         A Dataset class for text data that has been split into a number of
         shards. Iteratively loads each shard into memory as it is used. Defines
@@ -64,6 +64,13 @@ class ShardedTextDataset(IterableDataset):
             # and so should only be performed once
             self.total_num_examples = self._calculate_dataset_length()
 
+            if self.shuffle_shards:
+                datafiles_copy = self.datafiles.copy()
+                random.shuffle(datafiles_copy)
+                self.shard_order = datafiles_copy
+            else:
+                self.shard_order = self.datafiles
+
             self._start_from_beginning()
 
     # Iterate over all shards and get the total number of examples
@@ -77,12 +84,6 @@ class ShardedTextDataset(IterableDataset):
 
     def _start_from_beginning(self):
         self.global_index = 0
-        if self.shuffle_shards:
-            datafiles_copy = self.datafiles.copy()
-            random.shuffle(datafiles_copy)
-            self.shard_order = datafiles_copy
-        else:
-            self.shard_order = self.datafiles
         self.index_of_shard = 0
         self.index_within_shard = 0
         self._load_shard()
@@ -115,21 +116,19 @@ class ShardedTextDataset(IterableDataset):
     def __len__(self) -> int:
         return self.total_num_examples
 
-    # Upon forming an iterator, set current_index to 0, then define an iteration
-    # order over shards. Then use the _get_next_shard function to load the first
-    # shard in
-    def __iter__(self) -> Iterator[Tensor]:
-        return self
-
-    # Get the next batch of data from the current shard. Change over to the next
-    # shard if the current one is completed
-    def __next__(self) -> Tensor:
+    def __getitem__(self, index: int) -> Tensor:
         if self.global_index < self.total_num_examples:
             if self.index_within_shard >= self.num_shard_examples:
                 self.index_of_shard += 1
                 self.index_within_shard = 0
                 self._load_shard()
-            current_example = self.current_shard_data[self.index_within_shard]
+            # To mix sharding with a full indexible dataset, convert the query index to be modulo
+            # the number of examples in the shard. This raises a slight chance of "hash collisions"
+            # within a shard (i.e. retrieving the same item with different query indices). It seems
+            # like this is more of a problem when randomly sampling indices, than when going in
+            # order
+            retrieve_index = index % self.num_shard_examples
+            current_example = self.current_shard_data[retrieve_index]
             self.global_index += 1
             self.index_within_shard += 1
             return self.tokenizer(
@@ -137,7 +136,9 @@ class ShardedTextDataset(IterableDataset):
                 max_length=self.max_seq_length,
                 truncation=True
             )
-        raise StopIteration
+        self._start_from_beginning()
+        return self.__getitem__(index)
+
 
     def save(self, save_path) -> None:
         state_dict = {
