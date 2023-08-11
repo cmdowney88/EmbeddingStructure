@@ -1,0 +1,27 @@
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning POS evaluation for eu
+majority label baseline: 24.36
+per word majority baseline: 77.55
+random seed: 1
+num epochs: 64
+accuracy: 79.69
+----
+random seed: 2
+num epochs: 64
+accuracy: 80.86
+----
+random seed: 3
+num epochs: 64
+accuracy: 79.42
+----
+random seed: 4
+num epochs: 64
+accuracy: 80.47
+----
+all trials finished
+mean epochs: 64.0
+mean score: 80.11
+standard deviation: 0.58

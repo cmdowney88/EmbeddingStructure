@@ -1,0 +1,24 @@
+# task setup
+task: pos
+zero_shot_transfer: False
+transfer_source: None
+langs: ['te']
+dataset_path: data/ud-mono
+# whether to start with a randomly-initialized model
+random_weights: False
+
+# model options
+model_class: xlmr
+model_name: models/telugu/cpt_emb-32k-script+ident/best-checkpoint
+tokenizer_path: tokenizers/te_spm_32k.model
+checkpoint_path: models/telugu/pos/xlmr_cpt_emb-32k-script+ident
+
+# training options
+random_seed: 1
+epochs: 64
+batch_size: 72
+gradient_accumulation: 1
+max_seq_length: 256
+max_train_examples: null
+# checkpoints every two epochs, so patience epochs is this parameter x2
+patience: 4

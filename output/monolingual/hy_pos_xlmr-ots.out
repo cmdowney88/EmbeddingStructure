@@ -1,0 +1,27 @@
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning POS evaluation for hy
+majority label baseline: 25.87
+per word majority baseline: 65.12
+random seed: 1
+num epochs: 60
+accuracy: 95.51
+----
+random seed: 2
+num epochs: 60
+accuracy: 95.83
+----
+random seed: 3
+num epochs: 64
+accuracy: 91.3
+----
+random seed: 4
+num epochs: 64
+accuracy: 91.15
+----
+all trials finished
+mean epochs: 62.0
+mean score: 93.45
+standard deviation: 2.23
