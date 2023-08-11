@@ -163,7 +163,8 @@ def train_model(
     max_train_examples=math.inf,
     eval_every=2,
     patience=0,
-    model_dir='./eval_checkpoints'
+    model_dir='./eval_checkpoints',
+    task='pos'
 ):
     model.train()
     model.to('cuda:0')
@@ -212,7 +213,22 @@ def train_model(
             labels = labels.to('cuda:0')
 
             output = model.forward(input_ids, alignments)
-            loss = criterion(output, labels)
+            if task == 'ner':
+                # This is hard-coding the number of classes as well as the fact
+                # that the O class has index 0. Needs to be changed if these
+                # assumptions don't hold
+                total_labels = labels.numel()
+                num_BI_labels = torch.count_nonzero(labels)
+                num_O_labels = total_labels - num_BI_labels
+                if num_BI_labels > 0 and num_O_labels > num_BI_labels:
+                    O_lambda = num_BI_labels / num_O_labels
+                else:
+                    O_lambda = 1.0
+                class_weights = torch.ones(7, device='cuda:0')
+                class_weights[0] = O_lambda
+                loss = torch.nn.functional.cross_entropy(output, labels, weight=class_weights)
+            else:
+                loss = criterion(output, labels)
             if torch.isnan(loss):
                 raise RuntimeError(f"NaN loss detected: epoch {epoch_id + 1}")
             loss.backward()
@@ -393,6 +409,7 @@ def finetune_classification(
     over the specified language test sets at eval time
     """
     task_labels = _label_spaces[task]
+    metric_name = 'f1' if args.eval_metric == 'ner_f1' else 'accuracy'
     is_zero_shot = getattr(args, 'zero_shot_transfer', False)
     has_transfer_source = getattr(args, 'transfer_source', False)
     do_zero_shot = is_zero_shot and has_transfer_source
@@ -489,7 +506,7 @@ def finetune_classification(
         # only do training if we can't retrieve the existing checkpoint
         if not training_complete:
             # load criterion and optimizer
-            tagger_lr = 0.000005
+            tagger_lr = args.learning_rate
             gradient_accumulation = getattr(args, 'gradient_accumulation', 1)
 
             criterion = torch.nn.CrossEntropyLoss(reduction='mean')
@@ -510,7 +527,8 @@ def finetune_classification(
                 epochs=max_epochs,
                 max_train_examples=max_train_examples,
                 patience=args.patience,
-                model_dir=model_dir
+                model_dir=model_dir,
+                task=task
             )
         else:
             print(
@@ -540,7 +558,7 @@ def finetune_classification(
                 )
                 score = score * 100
                 scores[lg].append(score)
-                print(f"{lg} score: {round(score, 2)}")
+                print(f"{lg} {metric_name}: {round(score, 2)}")
             print("----")
         else:
             score = evaluate_model(
@@ -548,7 +566,7 @@ def finetune_classification(
             )
             score = score * 100
             scores.append(score)
-            print(f"score: {round(score, 2)}")
+            print(f"{metric_name}: {round(score, 2)}")
             print("----")
 
         # reinitalize the model for each trial if using randomly initialized encoder
@@ -594,11 +612,11 @@ def finetune_classification(
     if do_zero_shot:
         for lg in args.langs:
             mean_score, score_stdev = mean_stdev(scores[lg])
-            print(f"{lg} mean score: {round(mean_score, 2)}")
+            print(f"{lg} mean {metric_name}: {round(mean_score, 2)}")
             print(f"{lg} standard deviation: {round(score_stdev, 2)}")
     else:
         mean_score, score_stdev = mean_stdev(scores)
-        print(f"mean score: {round(mean_score, 2)}")
+        print(f"mean {metric_name}: {round(mean_score, 2)}")
         print(f"standard deviation: {round(score_stdev, 2)}")
 
 
@@ -677,14 +695,20 @@ if __name__ == "__main__":
     with open(args.config, 'r') as config_file:
         config_dict.update(yaml.load(config_file, Loader=yaml.Loader))
 
+    print(f"Config file: {args.config}")
+
     os.makedirs(args.checkpoint_path, exist_ok=True)
 
     # set defaults for optional parameters
-    args.max_train_examples = getattr(args, 'max_train_examples', math.inf)
+    # set max_train_examples to infinity it is is null or absent in config
+    if not getattr(args, 'max_train_examples', False):
+        args.max_train_examples = math.inf
     args.tokenizer_path = getattr(args, 'tokenizer_path', None)
     args.max_seq_length = getattr(args, 'max_seq_length', 512)
-    args.eval_metric = getattr(args, 'eval_metric', 'acc')
+    args.learning_rate = getattr(args, 'learning_rate', float('5.0e-6'))
     args.max_grad_norm = getattr(args, 'max_grad_norm', 1.0)
+
+    args.eval_metric = 'ner_f1' if args.task == 'ner' else 'acc'
 
     # ensure that given lang matches given task
     #for lang in args.langs:
