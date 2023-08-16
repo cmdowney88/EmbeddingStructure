@@ -9,8 +9,8 @@ from pathlib import Path
 import torch
 from transformers import (
     AutoTokenizer, XLMRobertaTokenizer, AutoModelForMaskedLM, LineByLineTextDataset,
-    DataCollatorForLanguageModeling, Trainer, TrainerCallback, TrainerControl, TrainerState,
-    TrainingArguments
+    DataCollatorForLanguageModeling, EarlyStoppingCallback, Trainer, TrainerCallback, TrainerControl,
+    TrainerState, TrainingArguments
 )
 
 from data import ShardedTextDataset
@@ -268,6 +268,12 @@ if __name__ == "__main__":
 
     checkpoint_callback = CheckpointControlCallback(trainer, args.checkpoints_directory)
     trainer.add_callback(checkpoint_callback)
+
+    if getattr(args, 'early_stopping_patience', False):
+        early_stopping_callback = EarlyStoppingCallback(
+            early_stopping_patience=args.early_stopping_patience
+        )
+        trainer.add_callback(early_stopping_callback)
 
     if getattr(args, 'freeze_main_model', False):
         freeze_callback = InitialFreezeCallback(trainer, args.model_freeze_prefix)
