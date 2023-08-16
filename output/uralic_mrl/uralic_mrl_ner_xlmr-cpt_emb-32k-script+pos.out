@@ -1,0 +1,124 @@
+Config file: configs/uralic_mrl_ner_xlmr-cpt_emb-32k-sp.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for myv
+majority label baseline: 73.47
+per word majority baseline: 81.04
+random seed: 1
+num epochs: 28
+f1: 84.66
+----
+random seed: 2
+num epochs: 30
+f1: 83.2
+----
+random seed: 3
+num epochs: 28
+f1: 86.02
+----
+random seed: 4
+num epochs: 30
+f1: 86.04
+----
+all trials finished
+mean epochs: 29.0
+mean f1: 84.98
+standard deviation: 1.17
+########
+Beginning NER evaluation for et
+majority label baseline: 66.57
+per word majority baseline: 82.44
+random seed: 1
+num epochs: 32
+f1: 83.73
+----
+random seed: 2
+num epochs: 32
+f1: 83.78
+----
+random seed: 3
+num epochs: 32
+f1: 84.51
+----
+random seed: 4
+num epochs: 30
+f1: 84.69
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 84.18
+standard deviation: 0.43
+########
+Beginning NER evaluation for fi
+majority label baseline: 67.93
+per word majority baseline: 86.37
+random seed: 1
+num epochs: 32
+f1: 77.66
+----
+random seed: 2
+num epochs: 30
+f1: 78.15
+----
+random seed: 3
+num epochs: 32
+f1: 78.07
+----
+random seed: 4
+num epochs: 32
+f1: 78.51
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 78.1
+standard deviation: 0.3
+########
+Beginning NER evaluation for hu
+majority label baseline: 69.11
+per word majority baseline: 88.01
+random seed: 1
+num epochs: 32
+f1: 81.98
+----
+random seed: 2
+num epochs: 32
+f1: 82.33
+----
+random seed: 3
+num epochs: 32
+f1: 81.02
+----
+random seed: 4
+num epochs: 30
+f1: 82.15
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 81.87
+standard deviation: 0.51
+########
+Beginning NER evaluation for ru
+majority label baseline: 50.83
+per word majority baseline: 83.06
+random seed: 1
+num epochs: 32
+f1: 82.44
+----
+random seed: 2
+num epochs: 32
+f1: 81.98
+----
+random seed: 3
+num epochs: 32
+f1: 82.16
+----
+random seed: 4
+num epochs: 32
+f1: 81.96
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 82.13
+standard deviation: 0.2

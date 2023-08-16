@@ -1,0 +1,124 @@
+Config file: configs/uralic_mrl_ner_xlmr-cpt-full_emb-32k-s.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for myv
+majority label baseline: 73.47
+per word majority baseline: 81.04
+random seed: 1
+num epochs: 30
+f1: 89.86
+----
+random seed: 2
+num epochs: 30
+f1: 89.09
+----
+random seed: 3
+num epochs: 28
+f1: 87.61
+----
+random seed: 4
+num epochs: 32
+f1: 89.0
+----
+all trials finished
+mean epochs: 30.0
+mean f1: 88.89
+standard deviation: 0.81
+########
+Beginning NER evaluation for et
+majority label baseline: 66.57
+per word majority baseline: 82.44
+random seed: 1
+num epochs: 32
+f1: 87.68
+----
+random seed: 2
+num epochs: 32
+f1: 87.12
+----
+random seed: 3
+num epochs: 32
+f1: 87.53
+----
+random seed: 4
+num epochs: 32
+f1: 87.82
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 87.54
+standard deviation: 0.26
+########
+Beginning NER evaluation for fi
+majority label baseline: 67.93
+per word majority baseline: 86.37
+random seed: 1
+num epochs: 32
+f1: 83.42
+----
+random seed: 2
+num epochs: 32
+f1: 83.42
+----
+random seed: 3
+num epochs: 30
+f1: 83.27
+----
+random seed: 4
+num epochs: 30
+f1: 83.22
+----
+all trials finished
+mean epochs: 31.0
+mean f1: 83.33
+standard deviation: 0.09
+########
+Beginning NER evaluation for hu
+majority label baseline: 69.11
+per word majority baseline: 88.01
+random seed: 1
+num epochs: 30
+f1: 86.37
+----
+random seed: 2
+num epochs: 32
+f1: 86.19
+----
+random seed: 3
+num epochs: 32
+f1: 85.89
+----
+random seed: 4
+num epochs: 32
+f1: 86.58
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 86.26
+standard deviation: 0.25
+########
+Beginning NER evaluation for ru
+majority label baseline: 50.83
+per word majority baseline: 83.06
+random seed: 1
+num epochs: 32
+f1: 85.33
+----
+random seed: 2
+num epochs: 32
+f1: 85.43
+----
+random seed: 3
+num epochs: 32
+f1: 85.55
+----
+random seed: 4
+num epochs: 32
+f1: 85.51
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 85.46
+standard deviation: 0.08

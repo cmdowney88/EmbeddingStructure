@@ -1,0 +1,124 @@
+Config file: configs/uralic_mrl_ner_xlmr-cpt-full_emb-32k.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for myv
+majority label baseline: 73.47
+per word majority baseline: 81.04
+random seed: 1
+num epochs: 32
+f1: 74.71
+----
+random seed: 2
+num epochs: 32
+f1: 70.97
+----
+random seed: 3
+num epochs: 32
+f1: 77.66
+----
+random seed: 4
+num epochs: 32
+f1: 71.58
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 73.73
+standard deviation: 2.68
+########
+Beginning NER evaluation for et
+majority label baseline: 66.57
+per word majority baseline: 82.44
+random seed: 1
+num epochs: 32
+f1: 0.0
+----
+random seed: 2
+num epochs: 32
+f1: 69.22
+----
+random seed: 3
+num epochs: 32
+f1: 72.38
+----
+random seed: 4
+num epochs: 32
+f1: 70.83
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 53.11
+standard deviation: 30.68
+########
+Beginning NER evaluation for fi
+majority label baseline: 67.93
+per word majority baseline: 86.37
+random seed: 1
+num epochs: 32
+f1: 0.0
+----
+random seed: 2
+num epochs: 32
+f1: 0.0
+----
+random seed: 3
+num epochs: 32
+f1: 0.0
+----
+random seed: 4
+num epochs: 32
+f1: 0.0
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 0.0
+standard deviation: 0.0
+########
+Beginning NER evaluation for hu
+majority label baseline: 69.11
+per word majority baseline: 88.01
+random seed: 1
+num epochs: 32
+f1: 67.99
+----
+random seed: 2
+num epochs: 30
+f1: 63.67
+----
+random seed: 3
+num epochs: 32
+f1: 0.0
+----
+random seed: 4
+num epochs: 32
+f1: 0.0
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 32.91
+standard deviation: 32.95
+########
+Beginning NER evaluation for ru
+majority label baseline: 50.83
+per word majority baseline: 83.06
+random seed: 1
+num epochs: 32
+f1: 66.72
+----
+random seed: 2
+num epochs: 32
+f1: 63.4
+----
+random seed: 3
+num epochs: 32
+f1: 67.75
+----
+random seed: 4
+num epochs: 30
+f1: 62.57
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 65.11
+standard deviation: 2.17

@@ -1,0 +1,124 @@
+Config file: configs/uralic_mrl_ner_xlmr-cpt_emb-32k.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for myv
+majority label baseline: 73.47
+per word majority baseline: 81.04
+random seed: 1
+num epochs: 32
+f1: 64.47
+----
+random seed: 2
+num epochs: 32
+f1: 65.34
+----
+random seed: 3
+num epochs: 32
+f1: 62.35
+----
+random seed: 4
+num epochs: 32
+f1: 67.55
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 64.93
+standard deviation: 1.87
+########
+Beginning NER evaluation for et
+majority label baseline: 66.57
+per word majority baseline: 82.44
+random seed: 1
+num epochs: 32
+f1: 0.0
+----
+random seed: 2
+num epochs: 32
+f1: 0.0
+----
+random seed: 3
+num epochs: 32
+f1: 0.0
+----
+random seed: 4
+num epochs: 32
+f1: 0.0
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 0.0
+standard deviation: 0.0
+########
+Beginning NER evaluation for fi
+majority label baseline: 67.93
+per word majority baseline: 86.37
+random seed: 1
+num epochs: 32
+f1: 0.0
+----
+random seed: 2
+num epochs: 32
+f1: 0.0
+----
+random seed: 3
+num epochs: 32
+f1: 54.34
+----
+random seed: 4
+num epochs: 32
+f1: 0.0
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 13.59
+standard deviation: 23.53
+########
+Beginning NER evaluation for hu
+majority label baseline: 69.11
+per word majority baseline: 88.01
+random seed: 1
+num epochs: 32
+f1: 0.0
+----
+random seed: 2
+num epochs: 32
+f1: 0.0
+----
+random seed: 3
+num epochs: 32
+f1: 0.0
+----
+random seed: 4
+num epochs: 32
+f1: 0.0
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 0.0
+standard deviation: 0.0
+########
+Beginning NER evaluation for ru
+majority label baseline: 50.83
+per word majority baseline: 83.06
+random seed: 1
+num epochs: 32
+f1: 55.97
+----
+random seed: 2
+num epochs: 32
+f1: 51.47
+----
+random seed: 3
+num epochs: 30
+f1: 56.97
+----
+random seed: 4
+num epochs: 32
+f1: 52.99
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 54.35
+standard deviation: 2.21
