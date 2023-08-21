@@ -1,0 +1,28 @@
+Config file: configs/eu_ner_xlmr-cpt_emb-32k-s.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for eu
+majority label baseline: 70.03
+per word majority baseline: 88.88
+random seed: 1
+num epochs: 12
+f1: 72.74
+----
+random seed: 2
+num epochs: 8
+f1: 71.82
+----
+random seed: 3
+num epochs: 14
+f1: 74.02
+----
+random seed: 4
+num epochs: 14
+f1: 73.35
+----
+all trials finished
+mean epochs: 12.0
+mean f1: 72.98
+standard deviation: 0.81

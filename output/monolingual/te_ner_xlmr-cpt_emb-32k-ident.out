@@ -1,0 +1,28 @@
+Config file: configs/te_ner_xlmr-cpt_emb-32k-i.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for te
+majority label baseline: 73.11
+per word majority baseline: 75.65
+random seed: 1
+num epochs: 30
+f1: 55.5
+----
+random seed: 2
+num epochs: 32
+f1: 56.23
+----
+random seed: 3
+num epochs: 32
+f1: 52.34
+----
+random seed: 4
+num epochs: 32
+f1: 55.44
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 54.88
+standard deviation: 1.5

@@ -1,0 +1,28 @@
+Config file: configs/hy_ner_xlmr-ots.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for hy
+majority label baseline: 41.35
+per word majority baseline: 74.99
+random seed: 1
+num epochs: 32
+f1: 94.3
+----
+random seed: 2
+num epochs: 32
+f1: 94.07
+----
+random seed: 3
+num epochs: 32
+f1: 94.2
+----
+random seed: 4
+num epochs: 24
+f1: 94.0
+----
+all trials finished
+mean epochs: 30.0
+mean f1: 94.14
+standard deviation: 0.12

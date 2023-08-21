@@ -1,0 +1,23 @@
+# task setup
+task: ner
+zero_shot_transfer: False
+transfer_source: None
+langs: ['myv']
+dataset_path: data/ner-mono
+# whether to start with a randomly-initialized model
+random_weights: False
+
+# model options
+model_class: xlmr
+model_name: xlm-roberta-base
+checkpoint_path: models/erzya/ner/xlmr_ots
+
+# training options
+random_seed: 1
+epochs: 32
+batch_size: 36
+gradient_accumulation: 2
+max_seq_length: 256
+max_train_examples: 32768
+# checkpoints every two epochs, so patience epochs is this parameter x2
+patience: 2

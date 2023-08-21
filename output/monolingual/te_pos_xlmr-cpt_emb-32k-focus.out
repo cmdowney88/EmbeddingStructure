@@ -1,3 +1,4 @@
+Config file: configs/te_pos_xlmr-cpt_emb-32k-f.yml
 Pytorch version: 1.13.1
 Pytorch CUDA version: 11.7
 GPUs available: True
@@ -23,5 +24,5 @@ accuracy: 83.22
 ----
 all trials finished
 mean epochs: 37.5
-mean score: 86.23
+mean accuracy: 86.23
 standard deviation: 3.83

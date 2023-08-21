@@ -1,0 +1,28 @@
+Config file: configs/sami_pos_xlmr-cpt-full_emb-32k.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning POS evaluation for sme
+majority label baseline: 22.99
+per word majority baseline: 61.65
+random seed: 1
+num epochs: 60
+accuracy: 65.7
+----
+random seed: 2
+num epochs: 54
+accuracy: 63.4
+----
+random seed: 3
+num epochs: 64
+accuracy: 64.38
+----
+random seed: 4
+num epochs: 64
+accuracy: 65.4
+----
+all trials finished
+mean epochs: 60.5
+mean accuracy: 64.72
+standard deviation: 0.91

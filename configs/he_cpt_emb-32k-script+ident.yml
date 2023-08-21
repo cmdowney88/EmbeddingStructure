@@ -12,6 +12,7 @@ learning_rate: 1e-5
 training_steps: 100000
 train_batch_size: 25
 gradient_accumulation_steps: 8
+max_grad_norm: 0.5
 logging_steps: 250
 eval_strategy: steps
 eval_steps: 1000

@@ -1,3 +1,4 @@
+Config file: configs/he_pos_xlmr-cpt-full_emb-32k-i.yml
 Pytorch version: 1.13.1
 Pytorch CUDA version: 11.7
 GPUs available: True
@@ -7,21 +8,21 @@ majority label baseline: 23.66
 per word majority baseline: 85.82
 random seed: 1
 num epochs: 64
-accuracy: 91.11
+accuracy: 90.95
 ----
 random seed: 2
-num epochs: 62
-accuracy: 91.17
+num epochs: 64
+accuracy: 91.25
 ----
 random seed: 3
-num epochs: 62
-accuracy: 91.04
+num epochs: 64
+accuracy: 91.63
 ----
 random seed: 4
 num epochs: 64
-accuracy: 91.21
+accuracy: 91.55
 ----
 all trials finished
-mean epochs: 63.0
-mean score: 91.14
-standard deviation: 0.06
+mean epochs: 64.0
+mean accuracy: 91.35
+standard deviation: 0.27

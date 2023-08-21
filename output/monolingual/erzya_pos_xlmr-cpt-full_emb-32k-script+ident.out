@@ -1,0 +1,28 @@
+Config file: configs/erzya_pos_xlmr-cpt-full_emb-32k-si.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning POS evaluation for myv
+majority label baseline: 24.14
+per word majority baseline: 55.97
+random seed: 1
+num epochs: 64
+accuracy: 77.21
+----
+random seed: 2
+num epochs: 62
+accuracy: 78.33
+----
+random seed: 3
+num epochs: 6
+accuracy: 48.54
+----
+random seed: 4
+num epochs: 64
+accuracy: 79.0
+----
+all trials finished
+mean epochs: 49.0
+mean accuracy: 70.77
+standard deviation: 12.85

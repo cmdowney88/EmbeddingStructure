@@ -1,0 +1,24 @@
+# task setup
+task: ner
+zero_shot_transfer: False
+transfer_source: None
+langs: ['myv']
+dataset_path: data/ner-mono
+# whether to start with a randomly-initialized model
+random_weights: False
+
+# model options
+model_class: xlmr
+model_name: models/erzya/cpt-full_emb-32k-ident/best-checkpoint
+tokenizer_path: tokenizers/erzya_spm_32k.model
+checkpoint_path: models/erzya/ner/xlmr_cpt-full_emb-32k-ident
+
+# training options
+random_seed: 1
+epochs: 32
+batch_size: 72
+gradient_accumulation: 1
+max_seq_length: 256
+max_train_examples: 32768
+# checkpoints every two epochs, so patience epochs is this parameter x2
+patience: 2

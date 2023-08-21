@@ -1,0 +1,28 @@
+Config file: configs/erzya_ner_xlmr-cpt-full_emb-32k-f.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for myv
+majority label baseline: 73.47
+per word majority baseline: 81.04
+random seed: 1
+num epochs: 22
+f1: 89.81
+----
+random seed: 2
+num epochs: 26
+f1: 88.64
+----
+random seed: 3
+num epochs: 28
+f1: 90.63
+----
+random seed: 4
+num epochs: 26
+f1: 90.6
+----
+all trials finished
+mean epochs: 25.5
+mean f1: 89.92
+standard deviation: 0.81

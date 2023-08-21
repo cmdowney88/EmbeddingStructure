@@ -1,0 +1,8 @@
+Config file: configs/he_ner_xlmr-ots.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for he
+majority label baseline: 64.14
+per word majority baseline: 81.71
