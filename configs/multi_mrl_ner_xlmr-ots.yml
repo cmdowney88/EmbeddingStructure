@@ -2,7 +2,7 @@
 task: ner
 zero_shot_transfer: False
 transfer_source: None
-langs: ['he']
+langs: ['hy', 'eu', 'myv', 'et', 'he', 'ru', 'te']
 dataset_path: data/ner-mono
 # whether to start with a randomly-initialized model
 random_weights: False
@@ -10,7 +10,7 @@ random_weights: False
 # model options
 model_class: xlmr
 model_name: xlm-roberta-base
-checkpoint_path: models/hebrew/ner/xlmr_ots
+checkpoint_path: models/multi_mrl/ner/xlmr_ots
 
 # training options
 random_seed: 1

@@ -1,0 +1,172 @@
+Config file: configs/multi_mrl_ner_xlmr-cpt-full_emb-32k-s.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for hy
+majority label baseline: 41.35
+per word majority baseline: 74.99
+random seed: 1
+num epochs: 32
+f1: 90.91
+----
+random seed: 2
+num epochs: 32
+f1: 91.0
+----
+random seed: 3
+num epochs: 32
+f1: 90.92
+----
+random seed: 4
+num epochs: 32
+f1: 90.61
+----
+all trials finished
+mean epochs: 32.0
+mean f1: 90.86
+standard deviation: 0.15
+########
+Beginning NER evaluation for eu
+majority label baseline: 70.03
+per word majority baseline: 88.88
+random seed: 1
+num epochs: 32
+f1: 91.04
+----
+random seed: 2
+num epochs: 32
+f1: 91.39
+----
+random seed: 3
+num epochs: 30
+f1: 91.1
+----
+random seed: 4
+num epochs: 30
+f1: 91.77
+----
+all trials finished
+mean epochs: 31.0
+mean f1: 91.32
+standard deviation: 0.29
+########
+Beginning NER evaluation for myv
+majority label baseline: 73.47
+per word majority baseline: 81.04
+random seed: 1
+num epochs: 30
+f1: 86.55
+----
+random seed: 2
+num epochs: 32
+f1: 89.49
+----
+random seed: 3
+num epochs: 28
+f1: 85.02
+----
+random seed: 4
+num epochs: 20
+f1: 84.65
+----
+all trials finished
+mean epochs: 27.5
+mean f1: 86.43
+standard deviation: 1.91
+########
+Beginning NER evaluation for et
+majority label baseline: 66.44
+per word majority baseline: 81.42
+random seed: 1
+num epochs: 30
+f1: 88.06
+----
+random seed: 2
+num epochs: 32
+f1: 87.52
+----
+random seed: 3
+num epochs: 30
+f1: 87.54
+----
+random seed: 4
+num epochs: 32
+f1: 87.77
+----
+all trials finished
+mean epochs: 31.0
+mean f1: 87.72
+standard deviation: 0.22
+########
+Beginning NER evaluation for he
+majority label baseline: 64.14
+per word majority baseline: 81.71
+random seed: 1
+num epochs: 30
+f1: 75.84
+----
+random seed: 2
+num epochs: 32
+f1: 75.32
+----
+random seed: 3
+num epochs: 32
+f1: 76.16
+----
+random seed: 4
+num epochs: 32
+f1: 75.78
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 75.78
+standard deviation: 0.3
+########
+Beginning NER evaluation for ru
+majority label baseline: 50.83
+per word majority baseline: 83.06
+random seed: 1
+num epochs: 32
+f1: 85.73
+----
+random seed: 2
+num epochs: 28
+f1: 85.6
+----
+random seed: 3
+num epochs: 32
+f1: 85.52
+----
+random seed: 4
+num epochs: 30
+f1: 85.74
+----
+all trials finished
+mean epochs: 30.5
+mean f1: 85.65
+standard deviation: 0.09
+########
+Beginning NER evaluation for te
+majority label baseline: 73.11
+per word majority baseline: 75.65
+random seed: 1
+num epochs: 32
+f1: 76.65
+----
+random seed: 2
+num epochs: 30
+f1: 74.85
+----
+random seed: 3
+num epochs: 32
+f1: 74.35
+----
+random seed: 4
+num epochs: 32
+f1: 74.51
+----
+all trials finished
+mean epochs: 31.5
+mean f1: 75.09
+standard deviation: 0.92

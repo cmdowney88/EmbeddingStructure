@@ -1,0 +1,28 @@
+Config file: configs/he_pos_xlmr-cpt-full.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning POS evaluation for he
+majority label baseline: 23.66
+per word majority baseline: 85.82
+random seed: 1
+num epochs: 48
+accuracy: 97.44
+----
+random seed: 2
+num epochs: 58
+accuracy: 97.4
+----
+random seed: 3
+num epochs: 58
+accuracy: 97.46
+----
+random seed: 4
+num epochs: 58
+accuracy: 97.65
+----
+all trials finished
+mean epochs: 55.5
+mean accuracy: 97.49
+standard deviation: 0.09

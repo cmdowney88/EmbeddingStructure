@@ -9,8 +9,9 @@ random_weights: False
 
 # model options
 model_class: xlmr
-model_name: xlm-roberta-base
-checkpoint_path: models/hebrew/ner/xlmr_ots
+model_name: models/hebrew/cpt-full/best-checkpoint
+tokenizer_path: xlm-roberta-base
+checkpoint_path: models/hebrew/ner/xlmr_cpt-full
 
 # training options
 random_seed: 1

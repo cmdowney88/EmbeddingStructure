@@ -1,23 +1,24 @@
 # task setup
-task: ner
+task: pos
 zero_shot_transfer: False
 transfer_source: None
-langs: ['he']
-dataset_path: data/ner-mono
+langs: ['te']
+dataset_path: data/ud-mono
 # whether to start with a randomly-initialized model
 random_weights: False
 
 # model options
 model_class: xlmr
-model_name: xlm-roberta-base
-checkpoint_path: models/hebrew/ner/xlmr_ots
+model_name: models/telugu/cpt-full/best-checkpoint
+tokenizer_path: xlm-roberta-base
+checkpoint_path: models/telugu/pos/xlmr_cpt-full
 
 # training options
 random_seed: 1
-epochs: 32
+epochs: 64
 batch_size: 36
 gradient_accumulation: 2
 max_seq_length: 256
-max_train_examples: 32768
+max_train_examples: null
 # checkpoints every two epochs, so patience epochs is this parameter x2
-patience: 2
+patience: 4

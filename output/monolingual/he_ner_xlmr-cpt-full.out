@@ -1,4 +1,4 @@
-Config file: configs/he_ner_xlmr-ots.yml
+Config file: configs/he_ner_xlmr-cpt-full.yml
 Pytorch version: 1.13.1
 Pytorch CUDA version: 11.7
 GPUs available: True
@@ -8,21 +8,21 @@ majority label baseline: 64.14
 per word majority baseline: 81.71
 random seed: 1
 num epochs: 32
-f1: 85.94
+f1: 86.94
 ----
 random seed: 2
 num epochs: 32
-f1: 85.77
+f1: 86.72
 ----
 random seed: 3
-num epochs: 30
-f1: 86.05
+num epochs: 32
+f1: 86.87
 ----
 random seed: 4
-num epochs: 32
-f1: 85.79
+num epochs: 30
+f1: 87.11
 ----
 all trials finished
 mean epochs: 31.5
-mean f1: 85.89
-standard deviation: 0.11
+mean f1: 86.91
+standard deviation: 0.14
