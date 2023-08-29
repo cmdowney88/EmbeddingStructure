@@ -75,6 +75,8 @@ def whitespace_to_sentencepiece(tokenizer, dataset, label_space, max_seq_length=
         alignment_id = 1  #offset for cls token
         for word, label in zip(sentence, labels):
             word_ids = tokenizer.encode(' ' + word, add_special_tokens=False)
+            if len(word_ids) < 1:
+                continue
             if len(tokens) + len(word_ids) > (max_seq_length - 1):
                 # add example to dataset
                 if tokenizer.cls_token_id != None:
