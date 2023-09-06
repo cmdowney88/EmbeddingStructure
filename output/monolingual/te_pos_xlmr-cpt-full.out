@@ -1,0 +1,28 @@
+Config file: configs/te_pos_xlmr-cpt-full.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning POS evaluation for te
+majority label baseline: 22.77
+per word majority baseline: 72.4
+random seed: 1
+num epochs: 48
+accuracy: 93.76
+----
+random seed: 2
+num epochs: 18
+accuracy: 83.91
+----
+random seed: 3
+num epochs: 50
+accuracy: 94.31
+----
+random seed: 4
+num epochs: 50
+accuracy: 93.62
+----
+all trials finished
+mean epochs: 41.5
+mean accuracy: 91.4
+standard deviation: 4.33

@@ -1,0 +1,28 @@
+Config file: configs/ru_pos_xlmr-ots.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning POS evaluation for ru
+majority label baseline: 23.84
+per word majority baseline: 88.62
+random seed: 1
+num epochs: 28
+accuracy: 98.49
+----
+random seed: 2
+num epochs: 64
+accuracy: 98.65
+----
+random seed: 3
+num epochs: 48
+accuracy: 98.54
+----
+random seed: 4
+num epochs: 64
+accuracy: 98.56
+----
+all trials finished
+mean epochs: 51.0
+mean accuracy: 98.56
+standard deviation: 0.06

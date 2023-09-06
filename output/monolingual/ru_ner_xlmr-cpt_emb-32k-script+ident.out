@@ -1,0 +1,28 @@
+Config file: configs/ru_ner_xlmr-cpt_emb-32k-si.yml
+Pytorch version: 1.13.1
+Pytorch CUDA version: 11.7
+GPUs available: True
+########
+Beginning NER evaluation for ru
+majority label baseline: 50.83
+per word majority baseline: 83.06
+random seed: 1
+num epochs: 28
+f1: 88.6
+----
+random seed: 2
+num epochs: 32
+f1: 88.49
+----
+random seed: 3
+num epochs: 32
+f1: 88.8
+----
+random seed: 4
+num epochs: 32
+f1: 88.67
+----
+all trials finished
+mean epochs: 31.0
+mean f1: 88.64
+standard deviation: 0.11
