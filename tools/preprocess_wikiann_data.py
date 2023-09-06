@@ -27,6 +27,8 @@ if __name__ == '__main__':
     parser.add_argument('--input_folder', type=str)
     parser.add_argument('--output_folder', type=str)
     parser.add_argument('--dataset_name', type=str)
+    parser.add_argument('--dev_size', type=float, default=0.05)
+    parser.add_argument('--test_size', type=float, default=0.1)
     args = parser.parse_args()
     
     all_train = []
@@ -78,8 +80,8 @@ if __name__ == '__main__':
                 json.dump(instances, writer, ensure_ascii=False)
         else:
             splits = dict()
-            ts = max(test_size, min_test/len(instances))
-            ds = max(dev_size, min_dev/len(instances))
+            ts = max(args.test_size, min_test/len(instances))
+            ds = max(args.dev_size, min_dev/len(instances))
             tr, splits['test'] = train_test_split(instances, test_size=ts, random_state=seed)
             splits['train'], splits['dev'] = train_test_split(tr, test_size=ds/(1 - ts), random_state=seed)
             
