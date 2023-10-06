@@ -1,4 +1,4 @@
-# Targeted Multilingual Language Models
+# Embedding Structure Matters
 
 ## Environment Setup
 To manage your Python environment, we recommend you [install anaconda/miniconda](https://docs.conda.io/en/latest/miniconda.html). Conda should then be used to create an environment with **Python 3.9**, using this command `conda create --name txlm python=3.9`.
