@@ -1,0 +1,5 @@
+# Sentencepiece vocabulary parameters
+tokenizer_model: unigram
+vocab_size: 32768
+train_dataset_path: data/basque/eu_oscar_cleaned_train.txt
+output_path: tokenizers/eu_spm_32k

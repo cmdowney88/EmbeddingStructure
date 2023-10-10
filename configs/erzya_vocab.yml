@@ -1,0 +1,5 @@
+# Sentencepiece vocabulary parameters
+tokenizer_model: unigram
+vocab_size: 32768
+train_dataset_path: data/uralic/erzya/myv_combined_cleaned_train.txt
+output_path: tokenizers/erzya_spm_32k

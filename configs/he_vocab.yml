@@ -1,0 +1,5 @@
+# Sentencepiece vocabulary parameters
+tokenizer_model: unigram
+vocab_size: 32768
+train_dataset_path: data/afro-asiatic/hebrew/he_oscar_cleaned_train/he_oscar_cleaned_shard1.txt
+output_path: tokenizers/he_spm_32k

@@ -1,0 +1,45 @@
+# Sentencepiece vocabulary parameters
+tokenizer_model: unigram
+vocab_size: 32768
+train_dataset_path: data/multilingual/multi_mrl_vocab_train_alpha02_5mil.txt
+output_path: tokenizers/multi_mrl_spm_32k
+
+# Paths and alpha for sampling vocab training set
+alpha: 0.2
+output_length: 5000000
+combined_data_output: data/multilingual/uralic_mrl_vocab_train_alpha02_5mil.txt
+composition_file: True
+data_files:
+    russian:
+        directory: data/indo-european/russian/ru_oscar_cleaned
+        files: [ru_oscar_cleaned_shard1.txt, ru_oscar_cleaned_shard2.txt,
+            ru_oscar_cleaned_shard3.txt, ru_oscar_cleaned_shard4.txt, ru_oscar_cleaned_shard5.txt,
+            ru_oscar_cleaned_shard6.txt, ru_oscar_cleaned_shard7.txt, ru_oscar_cleaned_shard8.txt,
+            ru_oscar_cleaned_shard9.txt, ru_oscar_cleaned_shard10.txt]
+    hebrew:
+        directory: data/afro-asiatic/hebrew/he_oscar_cleaned_train
+        files: [he_oscar_cleaned_shard1.txt, he_oscar_cleaned_shard2.txt,
+            he_oscar_cleaned_shard3.txt, he_oscar_cleaned_shard4.txt]
+    estonian:
+        directory: data/uralic/estonian/et_oscar_cleaned
+        files: [et_oscar_cleaned_shard1.txt, et_oscar_cleaned_shard2.txt, 
+            et_oscar_cleaned_shard3.txt, et_oscar_cleaned_shard4.txt, et_oscar_cleaned_shard5.txt,
+            et_oscar_cleaned_shard6.txt, et_oscar_cleaned_shard7.txt, et_oscar_cleaned_shard8.txt,
+            et_oscar_cleaned_shard9.txt, et_oscar_cleaned_shard10.txt]
+    armenian:
+        directory: data/indo-european/armenian/hy_oscar_cleaned_train
+        files: [hy_oscar_cleaned_train_shard1.txt, hy_oscar_cleaned_train_shard2.txt,
+            hy_oscar_cleaned_train_shard3.txt, hy_oscar_cleaned_train_shard4.txt,
+            hy_oscar_cleaned_train_shard5.txt, hy_oscar_cleaned_train_shard6.txt]
+    telugu:
+        directory: data/dravidian/telugu
+        files: [te_oscar_cleaned_train.txt]
+    basque:
+        directory: data/basque
+        files: [eu_oscar_cleaned_train.txt]
+    erzya:
+        directory: data/uralic/erzya
+        files: [myv_combined_cleaned_train.txt]
+    sami:
+        directory: data/uralic/sami
+        files: [sami_combined_cleaned_train.txt]

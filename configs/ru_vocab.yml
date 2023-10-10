@@ -1,0 +1,5 @@
+# Sentencepiece vocabulary parameters
+tokenizer_model: unigram
+vocab_size: 32768
+train_dataset_path: data/indo-european/russian/ru_oscar_cleaned/ru_oscar_cleaned_shard1.txt
+output_path: tokenizers/ru_spm_32k

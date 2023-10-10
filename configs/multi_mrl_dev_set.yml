@@ -1,0 +1,33 @@
+# Paths and alpha for sampling dev set
+alpha: 0.2
+output_length: 100000
+combined_data_output: data/multilingual/multi_mrl_dev_alpha02.txt
+data_files:
+    russian:
+        directory: data/indo-european/russian
+        files: [ru_oscar_cleaned_dev.txt]
+    hebrew:
+        directory: data/afro-asiatic/hebrew
+        files: [he_oscar_cleaned_dev.txt]
+    estonian:
+        directory: data/uralic/estonian
+        files: [et_oscar_cleaned_dev.txt]
+    armenian:
+        directory: data/indo-european/armenian
+        files: [hy_oscar_cleaned_dev.txt]
+    basque:
+        directory: data/basque
+        files: [eu_oscar_cleaned_dev.txt]
+    telugu:
+        directory: data/dravidian/telugu
+        files: [te_oscar_cleaned_dev.txt]
+    erzya:
+        directory: data/uralic/erzya
+        files: [myv_combined_cleaned_dev.txt]
+    sami:
+        directory: data/uralic/sami
+        files: [sami_combined_cleaned_dev.txt]
+    
+    
+    
+

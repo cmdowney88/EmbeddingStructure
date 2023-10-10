@@ -1,0 +1,5 @@
+# Sentencepiece vocabulary parameters
+tokenizer_model: unigram
+vocab_size: 32768
+train_dataset_path: data/uralic/estonian/et_oscar_cleaned/et_oscar_cleaned_shard1.txt
+output_path: tokenizers/et_spm_32k
