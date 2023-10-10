@@ -1,6 +1,8 @@
 #!/bin/sh
-source ~/miniconda3/bin/activate txlm
+PATH_TO_CONDA=$1
+VENVNAME=$2
+CONFIG=$3
 
-CONFIG=$1
+source ${PATH_TO_CONDA}/miniconda3/bin/activate $VENVNAME
 
 python -u tools/sample_and_merge_langs.py --config configs/${CONFIG}
